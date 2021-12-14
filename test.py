@@ -71,7 +71,7 @@ def _test_ccp4i(directory):
     ccp4i_args += ["-buccaneer-anisotropy-correction"]
     ccp4i_args += ["-buccaneer-fast"]
     ccp4i_args += ["-pdbout", os.path.join(ccp4i_dir, "ccp4i.pdb")]
-    ccp4i_args += ["-prefix", ccp4i_dir]
+    ccp4i_args += ["-prefix", os.path.join(ccp4i_dir, "ccp4i-")]
     if os.path.exists(_model_path(directory)):
         structure = read_structure(_model_path(directory))
         refmac = RefmacXray(structure, fsigf, freer, cycles=10).run()

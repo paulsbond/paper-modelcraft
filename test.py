@@ -1,103 +1,103 @@
 #!/usr/bin/python3
 
-import json
+import glob
 import multiprocessing
 import os
 import subprocess
 import gemmi
 from modelcraft.contents import AsuContents, PolymerType
+from modelcraft.jobs.ctruncate import CTruncate
 from modelcraft.jobs.parrot import Parrot
 from modelcraft.jobs.refmac import RefmacXray
 from modelcraft.reflections import DataItem, write_mtz
 from modelcraft.structure import read_structure
 
 
-def _paths(case):
-    data = os.path.join("datasets", case, "data.mtz")
-    contents = os.path.join("datasets", case, "contents.json")
-    model = os.path.join("datasets", case, "model.pdb")
-    return data, contents, model
+def _contents_path(directory):
+    return os.path.join(directory, "contents.json")
 
 
-def _call(args, log_path, err_path):
-    with open(log_path, "w") as out_stream:
-        with open(err_path, "w") as err_stream:
-            subprocess.call(args=args, stdout=out_stream, stderr=err_stream)
+def _data_path(directory):
+    return os.path.join(directory, "data.mtz")
 
 
-def _test_ccp4i(case):
-    directory = os.path.join("test", case, "ccp4i")
-    os.makedirs(directory, exist_ok=True)
-    data_path, contents_path, model_path = _paths(case)
-    mtz = gemmi.read_mtz_file(data_path)
-    fsigf = DataItem(mtz, "FP,SIGFP")
-    freer = DataItem(mtz, "FREE")
-    contents = AsuContents.from_file(contents_path)
-    sequence_path = os.path.join(directory, "sequence.fasta")
-    contents.write_sequence_file(sequence_path, types=[PolymerType.PROTEIN])
+def _model_path(directory):
+    return os.path.join(directory, "model.cif")
+
+
+def _fsigf(mtz):
+    ianom = next(DataItem.search(mtz, "KMKM"), None)
+    imean = next(DataItem.search(mtz, "JQ"), None)
+    fanom = next(DataItem.search(mtz, "GLGL"), None)
+    fmean = next(DataItem.search(mtz, "FQ"), None)
+    return fmean or CTruncate(ianom or imean or fanom).run().fmean
+
+
+def _test_modelcraft(directory):
+    modelcraft_dir = os.path.join(directory, "modelcraft")
+    try:
+        os.mkdir(modelcraft_dir)
+    except FileExistsError:
+        return
+    args = ["modelcraft", "xray"]
+    args += ["--directory", modelcraft_dir]
+    args += ["--contents", _contents_path(directory)]
+    args += ["--data", _data_path(directory)]
+    if os.path.exists(_model_path(directory)):
+        args += ["--model", _model_path(directory)]
+    else:
+        args += ["--unbiased"]
+    subprocess.call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _test_ccp4i(directory):
     ccp4i_dir = os.path.join(directory, "ccp4i")
-    ccp4i_pdb = os.path.join(directory, "ccp4i.pdb")
-    ccp4i_log = os.path.join(directory, "ccp4i.log")
-    ccp4i_err = os.path.join(directory, "ccp4i.err")
+    try:
+        os.mkdir(ccp4i_dir)
+    except FileExistsError:
+        return
+    mtz = gemmi.read_mtz_file(_data_path(directory))
+    fsigf = _fsigf(mtz)
+    freer = next(DataItem.search(mtz, "I"), None)
+    contents = AsuContents.from_file(_contents_path(directory))
+    sequence_path = os.path.join(ccp4i_dir, "sequence.fasta")
+    contents.write_sequence_file(sequence_path, types=[PolymerType.PROTEIN])
+    input_mtz = os.path.join(ccp4i_dir, "input.mtz")
     ccp4i_args = ["buccaneer_pipeline"]
     ccp4i_args += ["-seqin", sequence_path]
-    ccp4i_args += ["-colin-fo", "FP,SIGFP"]
-    ccp4i_args += ["-colin-free", "FREE"]
+    ccp4i_args += ["-mtzin", input_mtz]
+    ccp4i_args += ["-colin-fo", fsigf.label()]
+    ccp4i_args += ["-colin-free", freer.label()]
     ccp4i_args += ["-buccaneer-anisotropy-correction"]
     ccp4i_args += ["-buccaneer-fast"]
-    ccp4i_args += ["-pdbout", ccp4i_pdb]
+    ccp4i_args += ["-pdbout", os.path.join(ccp4i_dir, "ccp4i.pdb")]
     ccp4i_args += ["-prefix", ccp4i_dir]
-    if os.path.exists(model_path):
-        structure = read_structure(model_path)
+    if os.path.exists(_model_path(directory)):
+        structure = read_structure(_model_path(directory))
         refmac = RefmacXray(structure, fsigf, freer, cycles=10).run()
-        refmac_pdb = os.path.join(directory, "refmac.pdb")
-        refmac_mtz = os.path.join(directory, "refmac.mtz")
-        refmac.structure.write_pdb(refmac_pdb)
-        write_mtz(refmac_mtz, [fsigf, freer, refmac.abcd])
-        ccp4i_args += ["-mtzin", refmac_mtz]
+        input_pdb = os.path.join(ccp4i_dir, "input.pdb")
+        refmac.structure.write_pdb(input_pdb)
+        write_mtz(input_mtz, [fsigf, freer, refmac.abcd])
         ccp4i_args += ["-colin-hl", refmac.abcd.label()]
         ccp4i_args += ["-refmac-mlhl", "0"]
+        ccp4i_args += ["-pdbin-mr", input_pdb]
         ccp4i_args += ["-buccaneer-keyword", "mr-model-seed"]
-        ccp4i_args += ["-pdbin-mr", refmac_pdb]
     else:
         phases = DataItem(mtz, "HLA,HLB,HLC,HLD")
         parrot = Parrot(contents, fsigf, freer, phases).run()
-        parrot_mtz = os.path.join(directory, "parrot.mtz")
-        write_mtz(parrot_mtz, [fsigf, freer, parrot.abcd])
-        ccp4i_args += ["-mtzin", parrot_mtz]
+        write_mtz(input_mtz, [fsigf, freer, parrot.abcd])
         ccp4i_args += ["-colin-hl", parrot.abcd.label()]
         ccp4i_args += ["-refmac-mlhl", "1"]
-    _call(ccp4i_args, ccp4i_log, ccp4i_err)
-
-
-def _test_modelcraft(case):
-    directory = os.path.join("test", case, "modelcraft")
-    os.makedirs(directory, exist_ok=True)
-    modelcraft_log = os.path.join(directory, "modelcraft.log")
-    modelcraft_err = os.path.join(directory, "modelcraft.err")
-    if os.path.exists(modelcraft_log):
-        return
-    data, contents, model = _paths(case)
-    args = ["modelcraft", "xray"]
-    args += ["--contents", contents]
-    args += ["--data", data]
-    if os.path.exists(model):
-        args += ["--model", model]
-    else:
-        args += ["--unbiased"]
-    args += ["--directory", directory]
-    _call(args, modelcraft_log, modelcraft_err)
-
-
-def _test(case):
-    _test_ccp4i(case)
-    # _test_modelcraft(case)
+    subprocess.call(ccp4i_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def _main():
-    datasets = os.listdir("datasets")
+    dirs = glob.glob("data/af/*") + glob.glob("data/ep/*")
     pool = multiprocessing.Pool()
-    pool.map(_test, datasets)
+    pool.map_async(_test_modelcraft, dirs)
+    pool.map_async(_test_ccp4i, dirs)
+    pool.close()
+    pool.join()
 
 
 if __name__ == "__main__":

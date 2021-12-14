@@ -9,6 +9,7 @@ Each folder contains:
 
 - contents.json
 - data.mtz
+- deposited.cif.gz
 - model.cif
 
 The model is the AlphaFold model
@@ -30,6 +31,7 @@ Each folder contains:
 
 - contents.json
 - data.mtz
+- deposited.cif.gz
 
 The MTZ contains:
 

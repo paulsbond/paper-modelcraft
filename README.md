@@ -9,7 +9,6 @@ Each folder contains:
 
 - contents.json
 - data.mtz
-- metadata.json
 - model.cif
 
 The model is the AlphaFold model
@@ -24,38 +23,16 @@ The MTZ contains:
 - Observations (Ianom, Imean, Fanom or Fmean)
 - FreeR_flag
 
-The metadata contains:
-
-- uniprot
-- uniprot_begin
-- uniprot_end
-- pdb_id
-- pdb_length
-- pdb_copies
-- pdb_resolution
-- model_plddt_cutoff
-- model_plddt_mean
-- model_residues
-- model_mr_score
-- model_mr_zscore
-
 ## data/ep
 
-Contain 1204 JCSG structures, each with:
+Contains 1204 JCSG structures.
+Each folder contains:
 
 - contents.json
 - data.mtz
-- metadata.json
 
 The MTZ contains:
 
 - FP,SIGFP
 - FREE
 - HLA,HLB,HLC,HLD (deposited experimental phases without density modification)
-
-The metadata contains:
-
-- deposited_rfree
-- deposited_rwork
-- fmap
-- resolution

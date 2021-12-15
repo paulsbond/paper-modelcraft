@@ -5,6 +5,7 @@ import json
 import multiprocessing
 import os
 import subprocess
+import time
 import gemmi
 from modelcraft.contents import AsuContents, PolymerType
 from modelcraft.jobs.ctruncate import CTruncate
@@ -13,6 +14,15 @@ from modelcraft.jobs.phasematch import PhaseMatch
 from modelcraft.jobs.refmac import RefmacXray
 from modelcraft.reflections import DataItem, write_mtz
 from modelcraft.structure import read_structure
+
+
+_LOCK = multiprocessing.Lock()
+
+
+def _lock_processes(seconds):
+    _LOCK.acquire()
+    time.sleep(seconds)
+    _LOCK.release()
 
 
 def _contents_path(directory):
@@ -53,6 +63,7 @@ def _test_modelcraft(directory):
         args += ["--model", _model_path(directory)]
     else:
         args += ["--unbiased"]
+    _lock_processes(1)
     subprocess.call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 

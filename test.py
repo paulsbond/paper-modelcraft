@@ -92,6 +92,9 @@ def _test_ccp4i(directory):
 
 
 def _main():
+    if "CCP4" not in os.environ:
+        print("CCP4 environment variable not set")
+        return
     dirs = glob.glob("data/af/*") + glob.glob("data/ep/*")
     pool = multiprocessing.Pool()
     pool.map_async(_test_modelcraft, dirs)

@@ -60,7 +60,7 @@ def _test_ccp4i(directory):
     fsigf = _fsigf(mtz)
     freer = next(DataItem.search(mtz, "I"), None)
     contents = AsuContents.from_file(_contents_path(directory))
-    sequence_path = os.path.join(ccp4i_dir, "sequence.fasta")
+    sequence_path = os.path.join(ccp4i_dir, "input.fasta")
     contents.write_sequence_file(sequence_path, types=[PolymerType.PROTEIN])
     input_mtz = os.path.join(ccp4i_dir, "input.mtz")
     ccp4i_args = ["buccaneer_pipeline"]

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import glob
+import json
 import multiprocessing
 import os
 import subprocess
@@ -8,6 +9,7 @@ import gemmi
 from modelcraft.contents import AsuContents, PolymerType
 from modelcraft.jobs.ctruncate import CTruncate
 from modelcraft.jobs.parrot import Parrot
+from modelcraft.jobs.phasematch import PhaseMatch
 from modelcraft.jobs.refmac import RefmacXray
 from modelcraft.reflections import DataItem, write_mtz
 from modelcraft.structure import read_structure
@@ -19,6 +21,10 @@ def _contents_path(directory):
 
 def _data_path(directory):
     return os.path.join(directory, "data.mtz")
+
+
+def _deposited_path(directory):
+    return os.path.join(directory, "deposited.cif.gz")
 
 
 def _model_path(directory):
@@ -91,6 +97,30 @@ def _test_ccp4i(directory):
     subprocess.call(ccp4i_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def _write_metadata(directory):
+    path = os.path.join(directory, "metadata.json")
+    if os.path.exists(path):
+        return
+    mtz = gemmi.read_mtz_file(_data_path(directory))
+    fsigf = _fsigf(mtz)
+    freer = next(DataItem.search(mtz, "I"), None)
+    deposited = read_structure(_deposited_path(directory))
+    deposited_refmac = RefmacXray(deposited, fsigf, freer, cycles=0).run()
+    if os.path.exists(_model_path(directory)):
+        model = read_structure(_model_path(directory))
+        model_refmac = RefmacXray(model, fsigf, freer, cycles=0).run()
+        phasematch = PhaseMatch(fsigf, deposited_refmac.abcd, model_refmac.abcd).run()
+    else:
+        phases = DataItem(mtz, "HLA,HLB,HLC,HLD")
+        phasematch = PhaseMatch(fsigf, deposited_refmac.abcd, phases).run()
+    metadata = {
+        "f_map_correlation": phasematch.f_map_correlation,
+        "resolution": deposited_refmac.resolution_high,
+    }
+    with open(path, "w") as stream:
+        json.dump(metadata, stream, indent=4)
+
+
 def _main():
     if "CCP4" not in os.environ:
         print("CCP4 environment variable not set")
@@ -99,6 +129,7 @@ def _main():
     pool = multiprocessing.Pool()
     pool.map_async(_test_modelcraft, dirs)
     pool.map_async(_test_ccp4i, dirs)
+    pool.map_async(_write_metadata, dirs)
     pool.close()
     pool.join()
 

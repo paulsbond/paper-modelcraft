@@ -111,11 +111,13 @@ def _find_protein_na_ids(type_, min_res, max_res):
     return [tuple(row) for row in frame.to_numpy()]
 
 
-def _superpose(trimmed, deposited, chain):
-    trimmed.write_pdb("trimmed.pdb")
-    deposited.write_pdb("deposited.pdb")
-    # TODO: Use GESAMT
-    return -1
+def _superpose(trimmed, deposited, label_asym_id):
+    polymer1 = deposited[0].get_subchain(label_asym_id)
+    polymer2 = trimmed[0].get_subchain("A")
+    type_ = gemmi.PolymerType.PeptideL
+    select = gemmi.SupSelect.CaP
+    sup = gemmi.calculate_superposition(polymer1, polymer2, type_, select)
+    return sup.rmsd * math.sqrt(3)
 
 
 def _main():
@@ -128,7 +130,7 @@ def _main():
     uniprot_entries = {}
     for entry, uniprot in dna_ids + rna_ids:
         uniprot_entries.setdefault(uniprot, set()).add(entry)
-    examples = {}
+    examples = []
     for uniprot, entries in uniprot_entries.items():
         alphafold_path = _download_alphafold(uniprot)
         if alphafold_path is not None:
@@ -141,18 +143,19 @@ def _main():
                     plddt = _mean_plddt(trimmed)
                     deposited_path = _download_deposited(entry)
                     deposited = gemmi.read_structure(deposited_path)
-                    best_chain = entry_data["bestChainId"]
-                    rmsd = _superpose(trimmed, deposited, best_chain)
+                    best_label_asym_id = entry_data["bestChainId"]
+                    rmsd = _superpose(trimmed, deposited, best_label_asym_id)
                     example = {
                         "pdb": entry,
-                        "chain": best_chain,
                         "uniprot": uniprot,
                         "plddt": round(plddt, 1),
                         "rmsd": round(rmsd, 3),
                     }
                     print(example)
-                    break
-            break
+                    examples.append(example)
+                    frame = pandas.DataFrame(examples)
+                    frame.sort_values(by="rmsd", ascending=False, inplace=True)
+                    frame.to_csv("examples.csv")
 
 
 if __name__ == "__main__":

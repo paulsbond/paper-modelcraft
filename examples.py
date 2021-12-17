@@ -82,7 +82,7 @@ def _mean_plddt(structure):
     return sum(plddts) / len(plddts)
 
 
-def _find_protein_na_ids(type_, min_res, max_res):
+def _find_protein_na_entries(type_, min_res, max_res):
     url = "https://www.ebi.ac.uk/pdbe/search/pdb/select?"
     other_type = "RNA" if type_ == "DNA" else "DNA"
     query = (
@@ -98,7 +98,7 @@ def _find_protein_na_ids(type_, min_res, max_res):
         " AND modified_residue_flag:N"
         " AND max_observed_residues:[50 TO *]"
     )
-    filter_list = "pdb_id,uniprot_accession"
+    filter_list = "pdb_id,uniprot_accession,resolution,max_observed_residues"
     request_data = {"q": query, "fl": filter_list, "rows": 1000000, "wt": "json"}
     response_json = _request_json(url, data=request_data)
     response_data = response_json.get("response", {})
@@ -108,7 +108,7 @@ def _find_protein_na_ids(type_, min_res, max_res):
     frame = pandas.DataFrame(docs)
     # Drop entries with two protein entities
     frame.drop_duplicates(subset="pdb_id", keep=False, inplace=True)
-    return [tuple(row) for row in frame.to_numpy()]
+    return list(frame.to_records(index=False))
 
 
 def _superpose(trimmed, deposited, label_asym_id):
@@ -125,16 +125,25 @@ def _main():
     parser.add_argument("min_res", type=float, help="minimum resolution")
     parser.add_argument("max_res", type=float, help="maximum resolution")
     args = parser.parse_args()
-    dna_ids = _find_protein_na_ids("DNA", args.min_res, args.max_res)
-    rna_ids = _find_protein_na_ids("RNA", args.min_res, args.max_res)
+    dna_entries = _find_protein_na_entries("DNA", args.min_res, args.max_res)
+    rna_entries = _find_protein_na_entries("RNA", args.min_res, args.max_res)
     uniprot_entries = {}
-    for entry, uniprot in dna_ids + rna_ids:
+    resolution = {}
+    observed = {}
+    for item in dna_entries + rna_entries:
+        entry = item["pdb_id"]
+        uniprot = item["uniprot_accession"]
+        resolution[entry] = item["resolution"]
+        observed[entry] = item["max_observed_residues"]
         uniprot_entries.setdefault(uniprot, set()).add(entry)
     examples = []
     for uniprot, entries in uniprot_entries.items():
         alphafold_path = _download_alphafold(uniprot)
         if alphafold_path is not None:
-            alphafold = gemmi.read_structure(alphafold_path)
+            try:
+                alphafold = gemmi.read_structure(alphafold_path)
+            except (RuntimeError, ValueError):
+                continue
             uniprot_data = _pdbe_uniprot_data(uniprot)
             for entry in entries & uniprot_data.keys():
                 entry_data = uniprot_data[entry]
@@ -142,12 +151,17 @@ def _main():
                 if trimmed is not None:
                     plddt = _mean_plddt(trimmed)
                     deposited_path = _download_deposited(entry)
-                    deposited = gemmi.read_structure(deposited_path)
+                    try:
+                        deposited = gemmi.read_structure(deposited_path)
+                    except (RuntimeError, ValueError):
+                        continue
                     best_label_asym_id = entry_data["bestChainId"]
                     rmsd = _superpose(trimmed, deposited, best_label_asym_id)
                     example = {
                         "pdb": entry,
                         "uniprot": uniprot,
+                        "resolution": resolution[entry],
+                        "observed": observed[entry],
                         "plddt": round(plddt, 1),
                         "rmsd": round(rmsd, 3),
                     }

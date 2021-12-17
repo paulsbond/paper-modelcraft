@@ -106,7 +106,7 @@ def _find_protein_na_entries(type_, min_res, max_res):
     for doc in docs:
         doc["uniprot_accession"] = doc["uniprot_accession"][0]
     frame = pandas.DataFrame(docs)
-    # Drop entries with two protein entities
+    # Drop entries with two protein entities that match the above criteria
     frame.drop_duplicates(subset="pdb_id", keep=False, inplace=True)
     return list(frame.to_records(index=False))
 
@@ -169,7 +169,7 @@ def _main():
                     examples.append(example)
                     frame = pandas.DataFrame(examples)
                     frame.sort_values(by="rmsd", ascending=False, inplace=True)
-                    frame.to_csv("examples.csv")
+                    frame.to_csv("examples.csv", index=False)
 
 
 if __name__ == "__main__":

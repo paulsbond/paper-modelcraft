@@ -2,6 +2,7 @@
 
 import argparse
 import glob
+import math
 import os
 import urllib.request
 import gemmi
@@ -17,15 +18,7 @@ def _request_json(url, data=None):
     return response.json()
 
 
-def _pdbe_uniprot_data(uniprot):
-    url = f"https://www.ebi.ac.uk/pdbe/graph-api/uniprot/unipdb/{uniprot}"
-    response_json = _request_json(url)
-    return response_json[uniprot]
-
-
-def _download_mmcif(entry):
-    filename = f"{entry}.cif"
-    url = f"https://www.ebi.ac.uk/pdbe/entry-files/download/{filename}"
+def _download(filename, url):
     path = os.path.join("downloads", filename)
     if not os.path.exists(path):
         os.makedirs("downloads", exist_ok=True)
@@ -33,22 +26,63 @@ def _download_mmcif(entry):
     return path
 
 
-def _alphafold_structure(db_dir, uniprot):
-    paths = glob.glob(os.path.join(db_dir, f"AF-{uniprot}-*"))
-    if len(paths) != 1:
+def _pdbe_uniprot_data(uniprot):
+    url = f"https://www.ebi.ac.uk/pdbe/graph-api/uniprot/unipdb/{uniprot}"
+    response_json = _request_json(url)
+    data = response_json.get(uniprot, {}).get("data", [])
+    return {entry["accession"]: entry for entry in data}
+
+
+def _download_deposited(entry):
+    filename = f"{entry}.cif"
+    url = f"https://www.ebi.ac.uk/pdbe/entry-files/download/{filename}"
+    return _download(filename, url)
+
+
+def _download_alphafold(uniprot):
+    downloaded = glob.glob(os.path.join("downloads", f"AF-{uniprot}-*"))
+    if downloaded:
+        return downloaded[0]
+    url = "https://alphafold.ebi.ac.uk/api/search?type=main&start=0&rows=2"
+    response_json = _request_json(url + "&q=uniprotAccession:" + uniprot)
+    docs = response_json.get("docs", [])
+    if len(docs) == 1:
+        start = docs[0]["uniprotStart"]
+        end = docs[0]["uniprotEnd"]
+        if start == 1 and end != 1400:
+            entry = docs[0]["entryId"]
+            version = docs[0]["latestVersion"]
+            filename = f"{entry}-model_v{version}.cif"
+            url = f"https://alphafold.ebi.ac.uk/files/{filename}"
+            return _download(filename, url)
+    return None
+
+
+def _trim_alphafold(alphafold, residues):
+    structure = alphafold.clone()
+    chain = structure[0][0]
+    observed = [False] * len(chain)
+    for item in residues:
+        if item.get("indexType") == "UNIPROT" and item.get("observed") == "Y":
+            start = item["startIndex"] - 1
+            stop = item["endIndex"]
+            for i in range(start, stop):
+                observed[i] = True
+    if not any(observed):
         return None
-    doc = gemmi.cif.read(paths[0])
-    block = doc.sole_block()
-    structure = gemmi.make_structure_from_block(block)
+    for i in reversed(range(len(chain))):
+        if not observed[i]:
+            del chain[i]
     return structure
 
 
-def _mean_plddt(chain):
+def _mean_plddt(structure):
+    chain = structure[0][0]
     plddts = [atom.b_iso for residue in chain for atom in residue]
     return sum(plddts) / len(plddts)
 
 
-def _find_ids(type_, min_res, max_res):
+def _find_protein_na_ids(type_, min_res, max_res):
     url = "https://www.ebi.ac.uk/pdbe/search/pdb/select?"
     other_type = "RNA" if type_ == "DNA" else "DNA"
     query = (
@@ -77,69 +111,48 @@ def _find_ids(type_, min_res, max_res):
     return [tuple(row) for row in frame.to_numpy()]
 
 
-def _align_alphafold_models(pdbs, db_dir):
-    for i in reversed(range(len(pdbs))):
-        uniprot = pdbs[i]["uniprot_accession"]
-        paths = glob.glob(f"{db_dir}/AF-{uniprot}-*")
-        if len(paths) != 1:
-            del pdbs[i]
-            continue
-        doc = gemmi.cif.read(paths[0])
-        block = doc.sole_block()
-        begin = int(block.find_value("_ma_target_ref_db_details.seq_db_align_begin"))
-        end = int(block.find_value("_ma_target_ref_db_details.seq_db_align_end"))
-        aligned = _alignment(uniprot, pdbs[i]["pdb_id"], begin, end)
-        if aligned is None or not any(aligned):
-            del pdbs[i]
-            continue
-        structure = _make_search_structure(block, aligned)
-        plddt = _mean_plddt(structure, block)
-        pdbs[i]["aligned_plddt"] = plddt
-
-
-def _alignment(uniprot, pdb, begin, end):
-    length = response_json[uniprot]["length"]
-    data = response_json[uniprot]["data"]
-    entries = [e for e in data if e["accession"] == pdb]
-    if len(entries) != 1:
-        return None
-    entry = entries[0]
-    aligned = [False] * length
-    for residues in entry["residues"]:
-        if residues["indexType"] == "UNIPROT":
-            if "mutation" in residues:
-                return None
-            start = residues["startIndex"] - 1
-            stop = residues["endIndex"]
-            for index in range(start, stop):
-                aligned[index] = True
-    return aligned[begin - 1 : end]
-
-
-def _trim_chain(chain, aligned):
-    assert len(chain) == len(aligned)
-    for i in reversed(range(len(chain))):
-        if not aligned[i]:
-            del chain[i]
-    return chain
+def _superpose(trimmed, deposited, chain):
+    trimmed.write_pdb("trimmed.pdb")
+    deposited.write_pdb("deposited.pdb")
+    # TODO: Use GESAMT
+    return -1
 
 
 def _main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("db", help="path to a folder of AlphaFold models")
     parser.add_argument("min_res", type=float, help="minimum resolution")
     parser.add_argument("max_res", type=float, help="maximum resolution")
     args = parser.parse_args()
-    dna_ids = _find_ids("DNA", args.min_res, args.max_res)
-    rna_ids = _find_ids("RNA", args.min_res, args.max_res)
-    dict_ = {}
+    dna_ids = _find_protein_na_ids("DNA", args.min_res, args.max_res)
+    rna_ids = _find_protein_na_ids("RNA", args.min_res, args.max_res)
+    uniprot_entries = {}
     for entry, uniprot in dna_ids + rna_ids:
-        dict_.setdefault(uniprot, []).append(entry)
-    for uniprot, entries in dict_.items():
-        af_structure = _alphafold_structure(args.db, uniprot)
-        if af_chain is None:
-            continue
-        print(uniprot, entries)
+        uniprot_entries.setdefault(uniprot, set()).add(entry)
+    examples = {}
+    for uniprot, entries in uniprot_entries.items():
+        alphafold_path = _download_alphafold(uniprot)
+        if alphafold_path is not None:
+            alphafold = gemmi.read_structure(alphafold_path)
+            uniprot_data = _pdbe_uniprot_data(uniprot)
+            for entry in entries & uniprot_data.keys():
+                entry_data = uniprot_data[entry]
+                trimmed = _trim_alphafold(alphafold, entry_data["residues"])
+                if trimmed is not None:
+                    plddt = _mean_plddt(trimmed)
+                    deposited_path = _download_deposited(entry)
+                    deposited = gemmi.read_structure(deposited_path)
+                    best_chain = entry_data["bestChainId"]
+                    rmsd = _superpose(trimmed, deposited, best_chain)
+                    example = {
+                        "pdb": entry,
+                        "chain": best_chain,
+                        "uniprot": uniprot,
+                        "plddt": round(plddt, 1),
+                        "rmsd": round(rmsd, 3),
+                    }
+                    print(example)
+                    break
+            break
 
 
 if __name__ == "__main__":

@@ -15,10 +15,20 @@ def _main():
     if "CCP4" not in os.environ:
         print("CCP4 environment variable not set")
         return
-    dirs = glob.glob("data/af/*") + glob.glob("data/ep/*")
+    done = None
+    if os.path.exists("results.csv"):
+        results = pd.read_csv("results.csv")
+        todo = results[results.isnull().any(axis=1)]
+        done = results[~results.isnull().any(axis=1)]
+        dirs = [f"data/{row['type']}/{row['id']}" for row in todo.to_records()]
+    else:
+        dirs = glob.glob("data/af/*") + glob.glob("data/ep/*")
     pool = multiprocessing.Pool()
-    results = pool.map(_result, dirs)
-    pd.DataFrame(results).to_csv("results.csv", index=False)
+    result_list = pool.map(_result, dirs)
+    results = pd.DataFrame(result_list)
+    if done is not None:
+        results = pd.concat([done, results])
+    results.to_csv("results.csv", index=False)
 
 
 def _result(directory):

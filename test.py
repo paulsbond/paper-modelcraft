@@ -139,12 +139,18 @@ def _main():
         return
     parser = argparse.ArgumentParser()
     parser.add_argument("dirs", metavar="dir", nargs="*")
+    parser.add_argument("--modelcraft", action="store_true")
+    parser.add_argument("--ccp4i", action="store_true")
+    parser.add_argument("--metadata", action="store_true")
     args = parser.parse_args()
     dirs = args.dirs or glob.glob("data/af/*") + glob.glob("data/ep/*")
     pool = multiprocessing.Pool()
-    pool.map_async(_test_modelcraft, dirs)
-    pool.map_async(_test_ccp4i, dirs)
-    pool.map_async(_write_metadata, dirs)
+    if args.modelcraft:
+        pool.map_async(_test_modelcraft, dirs)
+    if args.ccp4i:
+        pool.map_async(_test_ccp4i, dirs)
+    if args.metadata:
+        pool.map_async(_write_metadata, dirs)
     pool.close()
     pool.join()
 

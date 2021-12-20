@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import argparse
 import glob
 import json
 import multiprocessing
@@ -136,7 +137,10 @@ def _main():
     if "CCP4" not in os.environ:
         print("CCP4 environment variable not set")
         return
-    dirs = glob.glob("data/af/*") + glob.glob("data/ep/*")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("dirs", metavar="dir", nargs="*")
+    args = parser.parse_args()
+    dirs = args.dirs or glob.glob("data/af/*") + glob.glob("data/ep/*")
     pool = multiprocessing.Pool()
     pool.map_async(_test_modelcraft, dirs)
     pool.map_async(_test_ccp4i, dirs)

@@ -14,7 +14,11 @@ from modelcraft.jobs.parrot import Parrot
 from modelcraft.jobs.phasematch import PhaseMatch
 from modelcraft.jobs.refmac import RefmacXray
 from modelcraft.reflections import DataItem, write_mtz
-from modelcraft.structure import read_structure, remove_residues
+from modelcraft.structure import (
+    read_structure,
+    remove_non_library_atoms,
+    remove_residues,
+)
 
 
 _LOCK = multiprocessing.Lock()
@@ -118,6 +122,7 @@ def _write_metadata(directory):
     freer = next(DataItem.search(mtz, "I"), None)
     deposited = read_structure(_deposited_path(directory))
     remove_residues(deposited, "UNL")
+    remove_non_library_atoms(deposited)
     deposited_refmac = RefmacXray(deposited, fsigf, freer, cycles=0).run()
     if os.path.exists(_model_path(directory)):
         model = read_structure(_model_path(directory))

@@ -49,8 +49,14 @@ def _modelcraft_completeness(directory):
 def _completeness(directory, structure_path):
     deposited_path = f"{directory}/deposited.cif.gz"
     if os.path.exists(structure_path) or os.path.exists(deposited_path):
-        structure = gemmi.read_structure(structure_path)
-        deposited = gemmi.read_structure(deposited_path)
+        try:
+            structure = gemmi.read_structure(structure_path)
+        except:
+            return None
+        try:
+            deposited = gemmi.read_structure(deposited_path)
+        except:
+            return None
         return _csymmatch_ncacstat(structure, deposited)
     return None
 
@@ -67,9 +73,15 @@ def _csymmatch_ncacstat(structure, deposited):
     args += ["-pdbin", "wrk.cif"]
     args += ["-pdbout", "sym.cif"]
     args += ["-origin-hand-work"]
-    subprocess.call(args, cwd=tmp_dir, stdout=subprocess.DEVNULL)
+    try:
+        subprocess.call(args, cwd=tmp_dir, stdout=subprocess.DEVNULL)
+    except:
+        return None
     args = ["ncacstat", "ref.cif", "sym.cif"]
-    output = subprocess.check_output(args, cwd=tmp_dir)
+    try:
+        output = subprocess.check_output(args, cwd=tmp_dir)
+    except:
+        return None
     shutil.rmtree(tmp_dir)
     split = output.split()
     if len(split) == 3:

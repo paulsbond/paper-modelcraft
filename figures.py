@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
 import os
 import matplotlib.pyplot as plt
@@ -6,18 +7,8 @@ import numpy as np
 import pandas as pd
 
 
-_COLOURS = [
-    "#377eb8",
-    "#ff7f00",
-    "#4daf4a",
-    "#f781bf",
-    "#a65628",
-    "#984ea3",
-    "#999999",
-    "#e41a1c",
-    "#dede00",
-]
-_MARKERS = ["o", "v", "s", "p", "P", "*", "h", "X", "d"]
+_COLOURS = ["#377eb8", "#ff7f00"]
+_MARKERS = ["o", "v"]
 
 
 plt.rc("axes", linewidth=0.6)
@@ -28,101 +19,78 @@ plt.rc("legend", fontsize=8, numpoints=1)
 def _main():
     results = pd.read_csv("results.csv")
     results.dropna(inplace=True)
+    results["ccp4i"] *= 100
+    results["modelcraft"] *= 100
     os.makedirs("figures", exist_ok=True)
+    _comparison("1", results)
+    _binned("2", results, "resolution", "Resolution / Å", "lower left")
+    _binned("3", results, "f_map_correlation", "F-map Correlation", "lower right")
+
+
+def _comparison(number, results):
     af = results[results["type"] == "af"]
     ep = results[results["type"] == "ep"]
-    _comparison("figures/01_af_raw.png", af, "ccp4i", "modelcraft")
-    _comparison("figures/02_ep_raw.png", ep, "ccp4i", "modelcraft")
-    _binned("figures/03_af_res.png", af, "resolution", (0, 4))
-    _binned("figures/04_ep_res.png", ep, "resolution", (0, 4))
-    _binned("figures/05_af_fmap.png", af, "f_map_correlation", (0, 1))
-    _binned("figures/06_eo_fmap.png", ep, "f_map_correlation", (0, 1))
-    _scatter("figures/07_af_ccp4i_res.png", af, "resolution", "ccp4i", (0, 4))
-    _scatter("figures/08_ep_ccp4i_res.png", ep, "resolution", "ccp4i", (0, 4))
-    _scatter("figures/09_af_ccp4i_fmap.png", af, "f_map_correlation", "ccp4i", (0, 1))
-    _scatter("figures/10_ep_ccp4i_fmap.png", ep, "f_map_correlation", "ccp4i", (0, 1))
-    _scatter("figures/11_af_modelcraft_res.png", af, "resolution", "modelcraft", (0, 4))
-    _scatter("figures/12_ep_modelcraft_res.png", ep, "resolution", "modelcraft", (0, 4))
-    _scatter("figures/13_af_modelcraft_fmap.png", af, "f_map_correlation", "modelcraft", (0, 1))
-    _scatter("figures/14_ep_modelcraft_fmap.png", ep, "f_map_correlation", "modelcraft", (0, 1))
+    x1 = af["ccp4i"]
+    x2 = ep["ccp4i"]
+    y1 = af["modelcraft"]
+    y2 = ep["modelcraft"]
+    min_ = -3
+    max_ = 103
+    ax1, ax2 = _axes()
+    ax1.plot([min_, max_], [min_, max_], "k-", alpha=0.5, linewidth=0.5)
+    ax2.plot([min_, max_], [min_, max_], "k-", alpha=0.5, linewidth=0.5)
+    ax1.plot(x1, y1, "kx", markersize=4, color=_COLOURS[0])
+    ax2.plot(x2, y2, "kx", markersize=4, color=_COLOURS[0])
+    ax1.axis([min_, max_, min_, max_])
+    ax2.axis([min_, max_, min_, max_])
+    ax1.set_aspect("equal", "box")
+    ax2.set_aspect("equal", "box")
+    _save_fig(number, ax1, ax2, "CCP4i Completeness / %", "Modelcraft Completeness / %")
 
 
-def _scatter(path, results, xkey, ykey, xlim):
-    ax = _single_ax()
-    x = results[xkey]
-    y = results[ykey]
-    ax.plot(x, y, "kx", markersize=3, color=_COLOURS[0], alpha=0.8)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(0, 1)
-    _save_fig(ax, path, xkey, ykey)
+def _binned(number, results, xkey, xlabel, legend_loc):
+    af = results[results["type"] == "af"]
+    ep = results[results["type"] == "ep"]
+    ax1, ax2 = _axes()
+    bin_centres = []
+    for ax, subset in ((ax1, af), (ax2, ep)):
+        data = {"ModelCraft": {"x": [], "y": []}, "CCP4i": {"x": [], "y": []}}
+        for row in subset.to_records():
+            data["ModelCraft"]["x"].append(row[xkey])
+            data["ModelCraft"]["y"].append(row["modelcraft"])
+            data["CCP4i"]["x"].append(row[xkey])
+            data["CCP4i"]["y"].append(row["ccp4i"])
+        for i, key in enumerate(data):
+            x = data[key]["x"]
+            y = data[key]["y"]
+            mean, _, se, bin_center = _bin_xy(x, y)
+            bin_centres.extend(bin_center)
+            ax.plot(
+                bin_center, mean, label=key, color=_COLOURS[i], marker=_MARKERS[i],
+            )
+            ax.fill_between(
+                bin_center,
+                mean - se,
+                mean + se,
+                alpha=0.5,
+                color=_COLOURS[i],
+                linewidth=0.0,
+            )
+    min_x, max_x = _min_max(bin_centres, pad=0.08)
+    ax1.axis([min_x, max_x, 0, 100])
+    ax2.axis([min_x, max_x, 0, 100])
+    ax1.legend(loc=legend_loc)
+    ax2.legend(loc=legend_loc)
+    _save_fig(number, ax1, ax2, xlabel, "Completeness / %")
 
 
-def _comparison(path, results, xkey, ykey):
-    x = results[xkey]
-    y = results[ykey]
-    ax = _single_ax(8, 8)
-    ax.plot([0, 1], [0, 1], "k--", alpha=0.5, linewidth=1)
-    ax.plot(x, y, "kx", markersize=3, color=_COLOURS[0], alpha=0.8)
-    ax.axis([0, 1, 0, 1])
-    ax.set_aspect("equal", "box")
-    _save_fig(ax, path, xkey, ykey)
-
-
-def _binned(
-    path,
-    results,
-    xkey,
-    xlim,
-    nbins=5,
-    legend_loc="best",
-):
-    data = {"ModelCraft": {"x": [], "y": []}, "CCP4i": {"x": [], "y": []}}
-    for row in results.to_records():
-        data["ModelCraft"]["x"].append(row[xkey])
-        data["CCP4i"]["x"].append(row[xkey])
-        data["ModelCraft"]["y"].append(row["modelcraft"])
-        data["CCP4i"]["y"].append(row["ccp4i"])
-    ax = _single_ax()
-    all_x = []
-    for i, key in enumerate(data):
-        x = data[key]["x"]
-        y = data[key]["y"]
-        all_x.extend(x)
-        mean, _, se, bin_center = _bin_xy(x, y, nbins)
-        ax.plot(
-            bin_center,
-            mean,
-            label=key,
-            color=_COLOURS[i],
-            marker=_MARKERS[i],
-        )
-        ax.fill_between(
-            bin_center,
-            mean - se,
-            mean + se,
-            alpha=0.5,
-            color=_COLOURS[i],
-            linewidth=0.0,
-        )
-    min_x, max_x = _min_max(all_x)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(0, 1)
-    ax.legend(loc=legend_loc)
-    _save_fig(ax, path, xkey, "Completeness")
-
-
-def _single_ax(width_mm=12, height_mm=8):
-    fig = plt.figure(figsize=(width_mm / 2.54, height_mm / 2.54), dpi=300)
-    return fig.add_subplot(111)
-
-
-def _save_fig(ax, path, xlabel, ylabel):
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
-    plt.tight_layout(pad=0.3)
-    plt.savefig(path)
-    plt.close()
+def _axes():
+    fig = plt.figure(figsize=(12 / 2.54, 7 / 2.54), dpi=300)
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122, sharex=ax1, sharey=ax1)
+    ax1.set_title("Molecular Replacement")
+    ax2.set_title("Experimental Phasing")
+    return ax1, ax2
 
 
 def _bin_xy(x, y, nbins=5):
@@ -141,9 +109,22 @@ def _bin_xy(x, y, nbins=5):
 def _min_max(x, pad=0.02):
     min_x = min(x)
     max_x = max(x)
-    min_x = min_x - (max_x - min_x) * pad
-    max_x = max_x + (max_x - min_x) * pad
+    padding = (max_x - min_x) * pad
+    min_x -= padding
+    max_x += padding
     return min_x, max_x
+
+
+def _save_fig(number, ax1, ax2, xlabel, ylabel):
+    ax1.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    ax2.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    plt.setp(ax2.get_yticklabels(), visible=False)
+    ax1.set_xlabel(xlabel)
+    ax2.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel)
+    plt.tight_layout(pad=0.3)
+    plt.savefig(f"figures/figure{number}.png")
+    plt.close()
 
 
 if __name__ == "__main__":

@@ -78,9 +78,9 @@ def _csymmatch_ncacstat(structure, deposited):
     tmp_dir = f"tmp-{uuid.uuid4()}"
     os.mkdir(tmp_dir)
     ref_path = f"{tmp_dir}/ref.cif"
-    deposited.make_mmcif_document().write_file(ref_path)
     wrk_path = f"{tmp_dir}/wrk.cif"
-    structure.make_mmcif_document().write_file(wrk_path)
+    _minimal_doc(deposited).write_file(ref_path)
+    _minimal_doc(structure).write_file(wrk_path)
     args = ["csymmatch"]
     args += ["-pdbin-ref", "ref.cif"]
     args += ["-pdbin", "wrk.cif"]
@@ -100,6 +100,15 @@ def _csymmatch_ncacstat(structure, deposited):
     if len(split) == 3:
         return float(split[1]) / float(split[0])
     return None
+
+
+def _minimal_doc(structure):
+    groups = gemmi.MmcifOutputGroups(False)
+    groups.cell = True
+    groups.symmetry = True
+    groups.scale = True
+    groups.atoms = True
+    return structure.make_mmcif_document(groups)
 
 
 if __name__ == "__main__":

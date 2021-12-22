@@ -67,6 +67,7 @@ def _completeness(directory, structure_path):
         try:
             deposited = gemmi.read_structure(deposited_path)
             remove_non_protein(deposited)
+            deposited.remove_empty_chains()
         except:
             return None
         return _csymmatch_ncacstat(structure, deposited)

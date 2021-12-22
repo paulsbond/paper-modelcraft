@@ -45,7 +45,7 @@ def _comparison(number, results):
     ax2.axis([min_, max_, min_, max_])
     ax1.set_aspect("equal", "box")
     ax2.set_aspect("equal", "box")
-    _save_fig(number, ax1, ax2, "CCP4i Completeness / %", "Modelcraft Completeness / %")
+    _save_fig(number, ax1, ax2, "CCP4i Completeness / %", "ModelCraft Completeness / %")
 
 
 def _binned(number, results, xkey, xlabel, legend_loc):

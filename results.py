@@ -9,6 +9,7 @@ import subprocess
 import uuid
 import gemmi
 import pandas as pd
+from modelcraft.structure import remove_non_protein
 
 
 def _main():
@@ -65,6 +66,7 @@ def _completeness(directory, structure_path):
             return None
         try:
             deposited = gemmi.read_structure(deposited_path)
+            remove_non_protein(deposited)
         except:
             return None
         return _csymmatch_ncacstat(structure, deposited)

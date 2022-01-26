@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 
 import json
+import multiprocessing
 import os
 import urllib.request
 import requests
-import multiprocessing
 
 
 _DOWNLOADS_PATH = "downloads"

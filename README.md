@@ -1,5 +1,19 @@
 # modelcraft-paper
 
+## Software versions
+
+CCP4 version 7.1.018
+
+Python 3.8.10 with PIP packages installed:
+
+- gemmi==0.5.1
+- matplotlib==3.3.3
+- modelcraft==2.2.3
+- numpy==1.19.5
+- pandas==1.0.4
+- requests==2.22.0
+- solrq==1.1.1
+
 ## data/af
 
 Contains 3030 AlphaFold MR structures.

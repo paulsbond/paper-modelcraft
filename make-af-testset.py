@@ -5,38 +5,13 @@ import glob
 import json
 import multiprocessing
 import os
-import threading
-import urllib.request
 import gemmi
-import requests
 import solrq
 from modelcraft.jobs.freerflag import FreeRFlag
 from modelcraft.jobs.molrep import Molrep
 from modelcraft.reflections import DataItem, write_mtz
 from modelcraft.structure import write_mmcif
 from modelcraft.scripts.contents import _entry_contents
-
-
-_LOCK = threading.Lock()
-
-
-def _request_json(url, data=None):
-    _LOCK.acquire()
-    if data is None:
-        response = requests.get(url)
-    else:
-        response = requests.post(url, data=data)
-    _LOCK.release()
-    return response.json()
-
-
-def _download_file(url, path):
-    if os.path.exists(path):
-        return
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    _LOCK.acquire()
-    urllib.request.urlretrieve(url, path)
-    _LOCK.release()
 
 
 def _get_potential_pdbs(uniprot):

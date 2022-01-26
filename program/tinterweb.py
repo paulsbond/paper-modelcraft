@@ -4,6 +4,7 @@ import json
 import os
 import urllib.request
 import requests
+import multiprocessing
 
 
 _REQUEST_JSON_CACHE = {}
@@ -15,21 +16,23 @@ def request_json(url, data=None):
             _REQUEST_JSON_CACHE = json.load(stream)
     data = data or {}
     hash_ = hash((url, tuple(sorted(data.items()))))
-    if hash_ in _REQUEST_JSON_CACHE:
-        return _REQUEST_JSON_CACHE[hash_]
-    if data is None:
-        response = requests.get(url)
-    else:
-        response = requests.post(url, data=data)
-    _REQUEST_JSON_CACHE[hash_] = response.json()
-    with open("request_cache.json", "w") as stream:
-        json.dump(_REQUEST_JSON_CACHE, stream)
-    return response.json()
+    with multiprocessing.Lock():
+        if hash_ in _REQUEST_JSON_CACHE:
+            return _REQUEST_JSON_CACHE[hash_]
+        if data is None:
+            response = requests.get(url)
+        else:
+            response = requests.post(url, data=data)
+        _REQUEST_JSON_CACHE[hash_] = response.json()
+        with open("request_cache.json", "w") as stream:
+            json.dump(_REQUEST_JSON_CACHE, stream)
+        return response.json()
 
 
 def download_file(filename, url):
     path = os.path.join("downloads", filename)
-    if not os.path.exists(path):
-        os.makedirs("downloads", exist_ok=True)
-        urllib.request.urlretrieve(url, path)
+    with multiprocessing.Lock():
+        if not os.path.exists(path):
+            os.makedirs("downloads", exist_ok=True)
+            urllib.request.urlretrieve(url, path)
     return path

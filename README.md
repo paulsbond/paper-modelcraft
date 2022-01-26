@@ -2,6 +2,8 @@
 
 ## Software versions
 
+Ubuntu 20.04.3 LTS
+
 CCP4 version 7.1.018
 
 Python 3.8.10 with PIP packages installed:

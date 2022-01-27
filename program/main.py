@@ -1,6 +1,9 @@
-def main():
-    pass
+import testsetep
+
+
+def _main():
+    testsetep.prepare()
 
 
 if __name__ == "__main__":
-    main()
+    _main()

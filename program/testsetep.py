@@ -33,7 +33,6 @@ def _prepare_case(pdb_id):
     directory = os.path.join("data", "ep", pdb_id)
     if os.path.exists(directory):
         return None
-    os.makedirs(directory)
     structure = pdbe.structure(pdb_id)
     rblocks = pdbe.rblocks(pdb_id)
     fmean, freer = sfdata.fmean_rfree(rblocks[0])
@@ -64,7 +63,8 @@ def _prepare_case(pdb_id):
     contents_json = os.path.join(directory, "contents.json")
     sequence_fasta = os.path.join(directory, "sequence.fasta")
     metadata_json = os.path.join(directory, "metadata.json")
-    write_mtz(data_mtz, fmean, freer, phases)
+    os.makedirs(directory)
+    write_mtz(data_mtz, [fmean, freer, phases])
     contents.write_json_file(contents_json)
     contents.write_sequence_file(sequence_fasta)
     with open(metadata_json, "w") as stream:
@@ -77,6 +77,6 @@ def prepare():
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, pdb_ids)
     counter = collections.Counter(failures)
-    with open("ep.failures.txt", "w") as stream:
+    with open("ep_failures.txt", "w") as stream:
         for failure, count in counter.most_common():
             print(count, failure, file=stream)

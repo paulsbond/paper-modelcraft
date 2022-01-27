@@ -1,5 +1,6 @@
 import gemmi
 import tinterweb
+from modelcraft.cell import remove_scale
 from modelcraft.structure import (
     read_structure,
     remove_non_library_atoms,
@@ -30,4 +31,5 @@ def structure(pdb_id):
     structure = read_structure(path)
     remove_residues(structure, "UNL")
     remove_non_library_atoms(structure)
+    remove_scale(structure=structure)
     return structure

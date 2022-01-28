@@ -9,7 +9,7 @@ import tinterweb
 from modelcraft.cell import update_cell
 from modelcraft.jobs.phasematch import PhaseMatch
 from modelcraft.jobs.refmac import RefmacXray
-from modelcraft.structure import read_structure, write_mmcif
+from modelcraft.structure import read_structure
 
 
 def _pdb_ids():
@@ -39,7 +39,7 @@ def _prepare_case(pdb_id):
     update_cell(structure, new_cell=fmean.cell)
     refmac = RefmacXray(structure, fmean, freer, cycles=10).run()
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
-        return "Rfree deemed too high"
+        return "R-free deemed too high"
     if refmac.data_completeness < 0.9:
         return "Data completeness less than 90%"
     model_path = f"downloads/data/reduced_full/{pdb_id.upper()}/model.pdb"
@@ -54,7 +54,7 @@ def _prepare_case(pdb_id):
 
 def prepare():
     pdb_ids = _pdb_ids()
-    # pdb_ids = ["1bd9", "1bjn", "1e24"]  # For small-scale testing
+    pdb_ids = ["1bd9", "1bjn", "1e24"]  # For small-scale testing
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, pdb_ids)
     testset.write_failures_table("prep_failures_mr.txt", failures)

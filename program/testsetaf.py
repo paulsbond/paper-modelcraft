@@ -1,35 +1,19 @@
 #!/usr/bin/python3
 
-import argparse
 import glob
 import json
 import multiprocessing
 import os
 import gemmi
 import solrq
+import pdbe
+import tarfile
+import tinterweb
 from modelcraft.jobs.freerflag import FreeRFlag
 from modelcraft.jobs.molrep import Molrep
 from modelcraft.reflections import DataItem, write_mtz
 from modelcraft.structure import write_mmcif
 from modelcraft.scripts.contents import _entry_contents
-
-
-def _get_potential_pdbs(uniprot):
-    url = "https://www.ebi.ac.uk/pdbe/search/pdb/select?"
-    query = solrq.Q(
-        uniprot_accession=uniprot,
-        modified_residue_flag="N",
-        experimental_method="X-ray diffraction",
-        experiment_data_available="y",
-        resolution=solrq.Range(0, 4),
-        number_of_polymer_entities=1,
-        max_observed_residues=solrq.Range(20, solrq.ANY),
-    )
-    filter_list = "pdb_id,number_of_copies,polymer_length"
-    request_data = {"q": query, "fl": filter_list, "rows": 1000000, "wt": "json"}
-    response_json = _request_json(url, data=request_data)
-    response_data = response_json.get("response", {})
-    return {doc["pdb_id"]: doc for doc in response_data["docs"]}
 
 
 def _choose_pdb(pdbs, uniprot, begin, end):
@@ -188,15 +172,56 @@ def _prepare_data(path):
         json.dump(metadata, stream, indent=4)
 
 
-def _main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "paths", metavar="PATH", nargs="+", help="path to AlphaFold mmCIF model"
+# New
+
+
+def _alphafold_mmcif_paths():
+    directory = "downloads/data/alphafold"
+    if not os.path.exists(directory):
+        server = "https://ftp.ebi.ac.uk"
+        filename = "UP000005640_9606_HUMAN_v2.tar"
+        url = f"{server}/pub/databases/alphafold/latest/{filename}"
+        path = tinterweb.download_file(filename, url)
+        tar = tarfile.open(path, "r")
+        tar.extractall(path=directory)
+    return glob.glob(f"{directory}/AF-*-F1-model_v2.cif.gz")
+
+
+def _get_potential_pdbs(uniprot):
+    query = solrq.Q(
+        molecule_type="Protein",
+        uniprot_accession=uniprot,
+        modified_residue_flag="N",
+        experimental_method="X-ray diffraction",
+        experiment_data_available="y",
+        resolution=solrq.Range(0, 4),
+        number_of_polymer_entities=1,
+        max_observed_residues=solrq.Range(20, solrq.ANY),
     )
-    args = parser.parse_args()
+    filter_list = "pdb_id,number_of_copies"
+    docs = pdbe.search(query, filter_list)
+    return {doc["pdb_id"]: doc for doc in docs}
+
+
+def _prepare_case(path):
+    doc = gemmi.cif.read(path)
+    block = doc.sole_block()
+    uniprot = block.find_value("_ma_target_ref_db_details.db_accession")
+    begin = int(block.find_value("_ma_target_ref_db_details.seq_db_align_begin"))
+    end = int(block.find_value("_ma_target_ref_db_details.seq_db_align_end"))
+    if begin != 1 or end == 1400:
+        return
+    pdbs = _get_potential_pdbs(uniprot)
+    if len(pdbs) == 0:
+        return
+
+
+def prepare():
+    paths = _alphafold_mmcif_paths()
+    paths = [  # For small-scale testing
+        "downloads/data/alphafold/AF-A4D1P6-F1-model_v2.cif.gz",
+        "downloads/data/alphafold/AF-A6NK44-F1-model_v2.cif.gz",
+        "downloads/data/alphafold/AF-P59666-F1-model_v2.cif.gz",
+    ]
     pool = multiprocessing.Pool()
-    pool.map(_prepare_data, args.paths)
-
-
-if __name__ == "__main__":
-    _main()
+    pool.map(_prepare_case, paths)

@@ -41,7 +41,7 @@ def _prepare_case(pdb_id):
     update_cell(structure, new_cell=fmean.cell)
     refmac = RefmacXray(structure, fmean, freer, cycles=10).run()
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
-        return "Rfree deemed too high"
+        return "R-free deemed too high"
     if refmac.data_completeness < 0.9:
         return "Data completeness less than 90%"
     phasematch = PhaseMatch(fmean, phases, refmac.abcd).run()
@@ -52,7 +52,7 @@ def _prepare_case(pdb_id):
 
 def prepare():
     pdb_ids = _search_for_pdb_ids()
-    # pdb_ids = {"1o6a", "2o7t", "4yme"}  # For small-scale testing
+    pdb_ids = {"1o6a", "2o7t", "4yme"}  # For small-scale testing
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, pdb_ids)
     testset.write_failures_table("prep_failures_ep.txt", failures)

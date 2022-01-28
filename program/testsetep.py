@@ -1,16 +1,13 @@
 #!/usr/bin/python3
 
-import collections
-import json
 import multiprocessing
 import os
 import pdbe
 import sfdata
+import testset
 from modelcraft.cell import update_cell
 from modelcraft.jobs.refmac import RefmacXray
 from modelcraft.jobs.phasematch import PhaseMatch
-from modelcraft.scripts.contents import _entry_contents
-from modelcraft.reflections import write_mtz
 
 
 def _search_for_pdb_ids():
@@ -50,32 +47,12 @@ def _prepare_case(pdb_id):
     phasematch = PhaseMatch(fmean, phases, refmac.abcd).run()
     if phasematch.f_map_correlation < 0.2:
         return "F-map correlation less than 0.2"
-    with multiprocessing.Lock():
-        contents = _entry_contents(pdb_id)
-    metadata = {
-        "data_resolution": refmac.resolution_high,
-        "data_completeness": refmac.data_completeness,
-        "deposited_rfree": refmac.rfree,
-        "deposited_rwork": refmac.rwork,
-        "f_map_correlation": phasematch.f_map_correlation,
-    }
-    data_mtz = os.path.join(directory, "data.mtz")
-    contents_json = os.path.join(directory, "contents.json")
-    sequence_fasta = os.path.join(directory, "sequence.fasta")
-    metadata_json = os.path.join(directory, "metadata.json")
-    os.makedirs(directory)
-    write_mtz(data_mtz, [fmean, freer, phases])
-    contents.write_json_file(contents_json)
-    contents.write_sequence_file(sequence_fasta)
-    with open(metadata_json, "w") as stream:
-        json.dump(metadata, stream, indent=2)
+    testset.write_case(pdb_id, directory, refmac, phasematch, fmean, freer, phases)
 
 
 def prepare():
     pdb_ids = _search_for_pdb_ids()
+    # pdb_ids = {"1o6a", "2o7t", "4yme"}  # For small-scale testing
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, pdb_ids)
-    counter = collections.Counter(failures)
-    with open("ep_failures.txt", "w") as stream:
-        for failure, count in counter.most_common():
-            print(count, failure, file=stream)
+    testset.write_failures_table("prep_failures_ep.txt", failures)

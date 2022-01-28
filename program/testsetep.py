@@ -73,7 +73,6 @@ def _prepare_case(pdb_id):
 
 def prepare():
     pdb_ids = _search_for_pdb_ids()
-    print("Found", len(pdb_ids), "possible entries for the PDB test set")
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, pdb_ids)
     counter = collections.Counter(failures)

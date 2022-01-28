@@ -1,7 +1,7 @@
 *.csv
 *.json
 *.pyc
-*.txt
 data
 downloads
 figures
+tables

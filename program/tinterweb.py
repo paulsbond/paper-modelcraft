@@ -9,27 +9,27 @@ import requests
 
 _DOWNLOADS_PATH = "downloads"
 _REQUEST_JSON_CACHE_PATH = "request_cache.json"
-_REQUEST_JSON_CACHE = {}
 
 
 def request_json(url, data=None):
-    if not _REQUEST_JSON_CACHE and os.path.exists(_REQUEST_JSON_CACHE_PATH):
-        with open(_REQUEST_JSON_CACHE_PATH) as stream:
-            _REQUEST_JSON_CACHE.update(json.load(stream))
     data = data or {}
     key = str((url, tuple(sorted(data.items()))))
     with multiprocessing.Lock():
-        if key in _REQUEST_JSON_CACHE:
-            return _REQUEST_JSON_CACHE[key]
+        cache = {}
+        if os.path.exists(_REQUEST_JSON_CACHE_PATH):
+            with open(_REQUEST_JSON_CACHE_PATH) as stream:
+                cache = json.load(stream)
+        if key in cache:
+            return cache[key]
         print("Requesting:", url)
-        if data is None:
+        if data:
             response = requests.get(url)
         else:
             print("With data:", data)
             response = requests.post(url, data=data)
-        _REQUEST_JSON_CACHE[key] = response.json()
+        cache[key] = response.json()
         with open(_REQUEST_JSON_CACHE_PATH, "w") as stream:
-            json.dump(_REQUEST_JSON_CACHE, stream)
+            json.dump(cache, stream)
         return response.json()
 
 

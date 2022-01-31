@@ -28,3 +28,10 @@ def structure(pdb_id):
     mc.remove_non_library_atoms(structure)
     mc.remove_scale(structure=structure)
     return structure
+
+
+def uniprot_data(uniprot):
+    url = f"https://www.ebi.ac.uk/pdbe/graph-api/uniprot/unipdb/{uniprot}"
+    response_json = tinterweb.request_json(url)
+    data = response_json.get(uniprot, {}).get("data", [])
+    return {entry["accession"]: entry for entry in data}

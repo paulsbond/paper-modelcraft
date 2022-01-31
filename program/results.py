@@ -8,8 +8,8 @@ import shutil
 import subprocess
 import uuid
 import gemmi
+import modelcraft as mc
 import pandas as pd
-from modelcraft.structure import remove_non_protein
 
 
 def _main():

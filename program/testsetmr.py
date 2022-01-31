@@ -2,14 +2,11 @@ import multiprocessing
 import os
 import shutil
 import tarfile
+import modelcraft as mc
 import pdbe
 import sfdata
 import testset
 import tinterweb
-from modelcraft.cell import update_cell
-from modelcraft.jobs.phasematch import PhaseMatch
-from modelcraft.jobs.refmac import RefmacXray
-from modelcraft.structure import read_structure
 
 
 def _pdb_ids():
@@ -36,16 +33,16 @@ def _prepare_case(pdb_id):
     fmean, freer = sfdata.fmean_rfree(rblocks[0])
     if not sfdata.compatible_cell(structure, [fmean, freer]):
         return "Different cell or space group in the structure and data"
-    update_cell(structure, new_cell=fmean.cell)
-    refmac = RefmacXray(structure, fmean, freer, cycles=10).run()
+    mc.update_cell(structure, new_cell=fmean.cell)
+    refmac = mc.RefmacXray(structure, fmean, freer, cycles=10).run()
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
         return "R-free deemed too high"
     if refmac.data_completeness < 0.9:
         return "Data completeness less than 90%"
     model_path = f"downloads/data/reduced_full/{pdb_id.upper()}/model.pdb"
-    model = read_structure(model_path)
-    model_refmac = RefmacXray(model, fmean, freer, cycles=0).run()
-    phasematch = PhaseMatch(fmean, model_refmac.abcd, refmac.abcd).run()
+    model = mc.read_structure(model_path)
+    model_refmac = mc.RefmacXray(model, fmean, freer, cycles=0).run()
+    phasematch = mc.PhaseMatch(fmean, model_refmac.abcd, refmac.abcd).run()
     if phasematch.f_map_correlation < 0.2:
         return "F-map correlation less than 0.2"
     testset.write_case(pdb_id, directory, refmac, phasematch, fmean, freer)

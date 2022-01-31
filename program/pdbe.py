@@ -1,11 +1,6 @@
 import gemmi
+import modelcraft as mc
 import tinterweb
-from modelcraft.cell import remove_scale
-from modelcraft.structure import (
-    read_structure,
-    remove_non_library_atoms,
-    remove_residues,
-)
 
 
 def rblocks(pdb_id):
@@ -28,8 +23,8 @@ def structure(pdb_id):
     filename = f"{pdb_id}.cif"
     url = f"https://www.ebi.ac.uk/pdbe/entry-files/download/{filename}"
     path = tinterweb.download_file(filename, url)
-    structure = read_structure(path)
-    remove_residues(structure, "UNL")
-    remove_non_library_atoms(structure)
-    remove_scale(structure=structure)
+    structure = mc.read_structure(path)
+    mc.remove_residues(structure, "UNL")
+    mc.remove_non_library_atoms(structure)
+    mc.remove_scale(structure=structure)
     return structure

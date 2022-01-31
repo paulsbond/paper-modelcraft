@@ -2,12 +2,10 @@
 
 import multiprocessing
 import os
+import modelcraft as mc
 import pdbe
 import sfdata
 import testset
-from modelcraft.cell import update_cell
-from modelcraft.jobs.refmac import RefmacXray
-from modelcraft.jobs.phasematch import PhaseMatch
 
 
 def _search_for_pdb_ids():
@@ -38,13 +36,13 @@ def _prepare_case(pdb_id):
         return "No experimental phases deposited"
     if not sfdata.compatible_cell(structure, [fmean, freer, phases]):
         return "Different cell or space group in the structure and data"
-    update_cell(structure, new_cell=fmean.cell)
-    refmac = RefmacXray(structure, fmean, freer, cycles=10).run()
+    mc.update_cell(structure, new_cell=fmean.cell)
+    refmac = mc.RefmacXray(structure, fmean, freer, cycles=10).run()
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
         return "R-free deemed too high"
     if refmac.data_completeness < 0.9:
         return "Data completeness less than 90%"
-    phasematch = PhaseMatch(fmean, phases, refmac.abcd).run()
+    phasematch = mc.PhaseMatch(fmean, phases, refmac.abcd).run()
     if phasematch.f_map_correlation < 0.2:
         return "F-map correlation less than 0.2"
     testset.write_case(pdb_id, directory, refmac, phasematch, fmean, freer, phases)

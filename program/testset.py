@@ -5,8 +5,11 @@ import os
 import modelcraft as mc
 
 
+_LOCK = multiprocessing.Lock()
+
+
 def write_case(pdb_id, directory, refmac, phasematch, fmean, freer, phases=None):
-    with multiprocessing.Lock():
+    with _LOCK:
         contents = mc.entry_contents(pdb_id)
     metadata = {
         "data_resolution": refmac.resolution_high,

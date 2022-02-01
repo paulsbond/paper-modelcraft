@@ -23,10 +23,10 @@ def request_json(url, data=None):
             return cache[key]
         print("Requesting:", url)
         if data:
-            response = requests.get(url)
-        else:
             print("With data:", data)
             response = requests.post(url, data=data)
+        else:
+            response = requests.get(url)
         cache[key] = response.json()
         with open(_REQUEST_JSON_CACHE_PATH, "w") as stream:
             json.dump(cache, stream)

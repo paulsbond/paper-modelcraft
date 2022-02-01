@@ -39,7 +39,7 @@ def _prepare_case(pdb_id):
     mc.update_cell(structure, new_cell=fmean.cell)
     refmac = mc.RefmacXray(structure, fmean, freer, cycles=10).run()
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
-        return "R-free deemed too high"
+        return "R-free for deposited structure deemed too high"
     if refmac.data_completeness < 0.9:
         return "Data completeness less than 90%"
     phasematch = mc.PhaseMatch(fmean, phases, refmac.abcd).run()

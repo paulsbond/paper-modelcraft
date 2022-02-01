@@ -187,9 +187,9 @@ def _prepare_case(path):
 def prepare():
     paths = _alphafold_mmcif_paths()
     paths = [  # For small-scale testing
-        "downloads/data/alphafold/AF-A4D1P6-F1-model_v2.cif.gz",
-        "downloads/data/alphafold/AF-A6NK44-F1-model_v2.cif.gz",
+        "downloads/data/alphafold/AF-P10827-F1-model_v2.cif.gz",
         "downloads/data/alphafold/AF-P59666-F1-model_v2.cif.gz",
+        "downloads/data/alphafold/AF-Q9H3H5-F1-model_v2.cif.gz",
     ]
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, paths)

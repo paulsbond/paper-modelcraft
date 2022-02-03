@@ -25,7 +25,7 @@ def write_case(pdb_id, directory, refmac, phasematch, fmean, freer, phases=None)
     os.makedirs(directory)
     mc.write_mtz(data_mtz, [fmean, freer, phases])
     contents.write_json_file(contents_json)
-    contents.write_sequence_file(sequence_fasta)
+    contents.write_sequence_file(sequence_fasta, types=[mc.PolymerType.PROTEIN])
     with open(metadata_json, "w") as stream:
         json.dump(metadata, stream, indent=4)
 

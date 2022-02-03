@@ -53,27 +53,27 @@ def _test_modelcraft(directory, disable=None):
 
 
 def _test_modelcraft_no_sheetbend(directory):
-    _test_modelcraft(directory, diable="sheetbend")
+    _test_modelcraft(directory, disable="sheetbend")
 
 
 def _test_modelcraft_no_pruning(directory):
-    _test_modelcraft(directory, diable="pruning")
+    _test_modelcraft(directory, disable="pruning")
 
 
 def _test_modelcraft_no_parrot(directory):
-    _test_modelcraft(directory, diable="parrot")
+    _test_modelcraft(directory, disable="parrot")
 
 
 def _test_modelcraft_no_dummy_atoms(directory):
-    _test_modelcraft(directory, diable="dummy-atoms")
+    _test_modelcraft(directory, disable="dummy-atoms")
 
 
 def _test_modelcraft_no_waters(directory):
-    _test_modelcraft(directory, diable="waters")
+    _test_modelcraft(directory, disable="waters")
 
 
 def _test_modelcraft_no_side_chain_fixing(directory):
-    _test_modelcraft(directory, diable="side-chain-fixing")
+    _test_modelcraft(directory, disable="side-chain-fixing")
 
 
 def _test_ccp4i(directory):
@@ -117,6 +117,7 @@ def _test_ccp4i(directory):
 
 def run():
     dirs = glob.glob("data/af/*") + glob.glob("data/ep/*") + glob.glob("data/mr/*")
+    dirs = ["data/ep/1o6a"]  # For small-scale testing
     pool = multiprocessing.Pool()
     pool.map_async(_test_modelcraft, dirs)
     pool.map_async(_test_modelcraft_no_sheetbend, dirs)

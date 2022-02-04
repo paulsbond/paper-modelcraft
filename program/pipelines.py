@@ -33,6 +33,8 @@ def _model_path(directory):
 
 
 def _test_modelcraft(directory, disable=None):
+    if disable is not None and directory.split("/")[1] != "mr":
+        return
     modelcraft_dirname = f"modelcraft-no-{disable}" if disable else "modelcraft"
     modelcraft_dir = os.path.join(directory, modelcraft_dirname)
     if os.path.exists(modelcraft_dir):
@@ -119,7 +121,7 @@ def _test_ccp4i(directory):
 
 def run():
     dirs = glob.glob("data/af/*") + glob.glob("data/ep/*") + glob.glob("data/mr/*")
-    dirs = ["data/ep/1o6a"]  # For small-scale testing
+    dirs = ["data/mr/1bd9"]  # For small-scale testing
     pool = multiprocessing.Pool()
     pool.map_async(_test_modelcraft, dirs)
     pool.map_async(_test_modelcraft_no_sheetbend, dirs)

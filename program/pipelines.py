@@ -112,7 +112,9 @@ def _test_ccp4i(directory):
         mc.write_mtz(input_mtz, [fsigf, freer, parrot.abcd])
         ccp4i_args += ["-colin-hl", parrot.abcd.label()]
         ccp4i_args += ["-refmac-mlhl", "1"]
-    subprocess.call(ccp4i_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    log_path = os.path.join(ccp4i_dir, "ccp4i.log")
+    with open(log_path, "w") as log_stream:
+        subprocess.call(ccp4i_args, stdout=log_stream, stderr=log_stream)
 
 
 def run():

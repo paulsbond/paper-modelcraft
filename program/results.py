@@ -40,6 +40,12 @@ def _result(directory):
     result.update(_metadata(directory))
     result.update(_ccp4i(directory))
     result.update(_modelcraft(directory))
+    result.update(_modelcraft(directory, disable="sheetbend"))
+    result.update(_modelcraft(directory, disable="pruning"))
+    result.update(_modelcraft(directory, disable="parrot"))
+    result.update(_modelcraft(directory, disable="dummy-atoms"))
+    result.update(_modelcraft(directory, disable="waters"))
+    result.update(_modelcraft(directory, disable="side-chain-fixing"))
     return result
 
 
@@ -82,9 +88,10 @@ def _ccp4i(directory):
     return _result_dict("ccp4i", completeness, rwork, rfree, seconds)
 
 
-def _modelcraft(directory):
+def _modelcraft(directory, disable=None):
+    modelcraft_dir = "modelcraft" if disable is None else f"modelcraft-no-{disable}"
     rwork = rfree = seconds = None
-    json_path = f"{directory}/modelcraft/modelcraft.json"
+    json_path = f"{directory}/{modelcraft_dir}/modelcraft.json"
     if os.path.exists(json_path):
         with open(json_path) as stream:
             modelcraft = json.load(stream)
@@ -92,9 +99,10 @@ def _modelcraft(directory):
                 rwork = modelcraft["final"]["r_work"]
                 rfree = modelcraft["final"]["r_free"]
                 seconds = modelcraft["seconds"]["total"]
-    model_path = f"{directory}/modelcraft/modelcraft.cif"
+    model_path = f"{directory}/{modelcraft_dir}/modelcraft.cif"
     completeness = _completeness(model_path)
-    return _result_dict("modelcraft", completeness, rwork, rfree, seconds)
+    modelcraft_key = modelcraft_dir.replace("-", "_")
+    return _result_dict(modelcraft_key, completeness, rwork, rfree, seconds)
 
 
 def _completeness(model_path):

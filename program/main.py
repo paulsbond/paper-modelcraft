@@ -3,6 +3,7 @@ import testsetep
 import testsetmr
 import testsetaf
 import pipelines
+import results
 
 
 def _main():
@@ -13,6 +14,7 @@ def _main():
     testsetmr.prepare()
     testsetaf.prepare()
     pipelines.run()
+    results.gather()
 
 
 if __name__ == "__main__":

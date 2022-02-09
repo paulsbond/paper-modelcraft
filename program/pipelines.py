@@ -120,6 +120,7 @@ def _test_ccp4i(directory):
 
 
 def run():
+    print("Running pipelines...")
     dirs = glob.glob("data/af/*") + glob.glob("data/ep/*") + glob.glob("data/mr/*")
     dirs = ["data/mr/1bd9"]  # For small-scale testing
     pool = multiprocessing.Pool()

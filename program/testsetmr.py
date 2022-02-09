@@ -50,6 +50,7 @@ def _prepare_case(pdb_id):
 
 
 def prepare():
+    print("Preparing the MR testset...")
     pdb_ids = _pdb_ids()
     pdb_ids = ["1bd9", "1bjn", "1e24"]  # For small-scale testing
     pool = multiprocessing.Pool()

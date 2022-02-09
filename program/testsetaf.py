@@ -185,6 +185,7 @@ def _prepare_case(path):
 
 
 def prepare():
+    print("Preparing the AF testset...")
     paths = _alphafold_mmcif_paths()
     paths = [  # For small-scale testing
         "downloads/data/alphafold/AF-P10827-F1-model_v2.cif.gz",

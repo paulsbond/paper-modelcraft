@@ -18,6 +18,7 @@ _RESULTS_PATH = "results.csv"
 
 
 def gather():
+    print("Gathering results...")
     done = None
     if os.path.exists(_RESULTS_PATH):
         results = pd.read_csv(_RESULTS_PATH)

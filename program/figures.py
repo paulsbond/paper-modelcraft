@@ -6,49 +6,67 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+# Line weights should be between 0.35 and 1.5pt at final size.
+# Monochrome and greyscale images should have a minimum resolution of 600 d.p.i.
+# Single-column width (8.85 cm), part-page width (12 cm) or full-page width (18 cm).
+# A page is approximately 18 x 24 cm
+# At the final published size, the labelling on the figure should be approximately 8pt.
+# Use Arial, Courier, Helvetica, Symbol, Times or Times New Roman
 
-_COLOURS = ["#377eb8", "#ff7f00"]
-_MARKERS = ["o", "v"]
+_BLUE = "#377eb8"
+_ORANGE = "#ff7f00"
 
-
-plt.rc("axes", linewidth=0.6)
+plt.rc("axes", titlesize=8, labelsize=8, linewidth=0.6)
 plt.rc("font", size=8, family="sans-serif")
 plt.rc("legend", fontsize=8, numpoints=1)
+plt.rc("xtick", labelsize=8)
+plt.rc("ytick", labelsize=8)
 
 
-def _main():
-    results = pd.read_csv("results.csv")
-    results.dropna(inplace=True)
-    results["ccp4i"] *= 100
-    results["modelcraft"] *= 100
+def make_figures():
+    print("Making figures...")
+    results_mr = pd.read_csv("results/results_mr.csv")
+    results_ep = pd.read_csv("results/results_ep.csv")
+    results_af = pd.read_csv("results/results_af.csv")
     os.makedirs("figures", exist_ok=True)
-    _comparison("1", results)
-    _binned("2", results, "resolution", "Resolution / Å", "lower left")
-    _binned("3", results, "f_map_correlation", "F-map Correlation", "lower right")
+    _completeness(results_mr, "mr")
+    _completeness(results_ep, "ep")
+    _completeness(results_af, "af")
+    # mr_res
+    # ep_res
+    # mr_fmap
+    # ep_fmap
+    # mr_time
+    # mr_ablation
 
 
-def _comparison(number, results):
-    af = results[results["type"] == "af"]
-    ep = results[results["type"] == "ep"]
-    x1 = af["ccp4i"]
-    x2 = ep["ccp4i"]
-    y1 = af["modelcraft"]
-    y2 = ep["modelcraft"]
-    min_ = -3
-    max_ = 103
-    ax1, ax2 = _axes()
-    ax1.plot([min_, max_], [min_, max_], "k-", alpha=0.5, linewidth=0.5)
-    ax2.plot([min_, max_], [min_, max_], "k-", alpha=0.5, linewidth=0.5)
-    ax1.plot(x1, y1, "kx", markersize=4, color=_COLOURS[0])
-    ax2.plot(x2, y2, "kx", markersize=4, color=_COLOURS[0])
-    ax1.axis([min_, max_, min_, max_])
-    ax2.axis([min_, max_, min_, max_])
-    ax1.set_aspect("equal", "box")
-    ax2.set_aspect("equal", "box")
-    _save_fig(number, ax1, ax2, "CCP4i Completeness / %", "ModelCraft Completeness / %")
+def _completeness(results, type_):
+    fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
+    ax = fig.add_subplot(111)
+    sub = results[results["type"] == type_]
+    sub = sub[["ccp4i_completeness", "modelcraft_completeness"]]
+    sub = sub.dropna()
+    x = sub["ccp4i_completeness"]
+    y = sub["modelcraft_completeness"]
+    min_, max_ = (0, 1)
+    ax.plot([min_, max_], [min_, max_], "k-", alpha=0.5, linewidth=0.5)
+    ax.plot(x, y, "kx", markersize=4, color=_BLUE)
+    ax.axis([min_, max_, min_, max_])
+    ax.set_aspect("equal", "box")
+    ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    ax.set_xlabel("CCP4i Completeness")
+    ax.set_ylabel("ModelCraft Completeness")
+    plt.tight_layout(pad=0.3)
+    plt.savefig(f"figures/fig_{type_}.png")
+    with open(f"figures/fig_{type_}.txt", "w") as stream:
+        print("Points:", len(x), file=stream)
+    plt.close()
 
 
-def _binned(number, results, xkey, xlabel, legend_loc):
+def _binned(results, type_):
+    fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
+    ax = fig.add_subplot(111)
+    x, y = _get_xy(results, type_, "ccp4i_completeness", "modelcraft_completeness")
     af = results[results["type"] == "af"]
     ep = results[results["type"] == "ep"]
     ax1, ax2 = _axes()
@@ -84,15 +102,6 @@ def _binned(number, results, xkey, xlabel, legend_loc):
     _save_fig(number, ax1, ax2, xlabel, "Completeness / %")
 
 
-def _axes():
-    fig = plt.figure(figsize=(12 / 2.54, 7 / 2.54), dpi=300)
-    ax1 = fig.add_subplot(121)
-    ax2 = fig.add_subplot(122, sharex=ax1, sharey=ax1)
-    ax1.set_title("Molecular Replacement")
-    ax2.set_title("Experimental Phasing")
-    return ax1, ax2
-
-
 def _bin_xy(x, y, nbins=5):
     x = np.array(x)
     y = np.array(y)
@@ -113,19 +122,3 @@ def _min_max(x, pad=0.02):
     min_x -= padding
     max_x += padding
     return min_x, max_x
-
-
-def _save_fig(number, ax1, ax2, xlabel, ylabel):
-    ax1.tick_params(direction="out", length=3, pad=3, top=False, right=False)
-    ax2.tick_params(direction="out", length=3, pad=3, top=False, right=False)
-    plt.setp(ax2.get_yticklabels(), visible=False)
-    ax1.set_xlabel(xlabel)
-    ax2.set_xlabel(xlabel)
-    ax1.set_ylabel(ylabel)
-    plt.tight_layout(pad=0.3)
-    plt.savefig(f"figures/figure{number}.png")
-    plt.close()
-
-
-if __name__ == "__main__":
-    _main()

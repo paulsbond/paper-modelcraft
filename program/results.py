@@ -14,39 +14,46 @@ import pdbe
 import ncacstat
 
 
-_RESULTS_PATH = "results.csv"
-
-
 def gather():
-    print("Gathering results...")
-    done = None
-    if os.path.exists(_RESULTS_PATH):
-        results = pd.read_csv(_RESULTS_PATH)
+    os.makedirs("results", exist_ok=True)
+    missing = []
+    for type_ in ("af", "ep", "mr"):
+        print(f"Gathering {type_.upper()} results...")
+        results_path = f"results/results_{type_}.csv"
+        done = None
+        if os.path.exists(results_path):
+            results = pd.read_csv(results_path)
+            todo = results[results.isnull().any(axis=1)]
+            done = results[~results.isnull().any(axis=1)]
+            dirs = [f"data/{row['type']}/{row['id']}" for row in todo.to_records()]
+        else:
+            dirs = glob.glob(f"data/{type_}/*")
+        pool = multiprocessing.Pool()
+        result_list = pool.map(_result, dirs)
+        results = pd.DataFrame(result_list)
+        if done is not None:
+            results = pd.concat([done, results])
+        results.to_csv(results_path, index=False)
         todo = results[results.isnull().any(axis=1)]
-        done = results[~results.isnull().any(axis=1)]
-        dirs = [f"data/{row['type']}/{row['id']}" for row in todo.to_records()]
-    else:
-        dirs = glob.glob("data/af/*") + glob.glob("data/ep/*") + glob.glob("data/mr/*")
-    pool = multiprocessing.Pool()
-    result_list = pool.map(_result, dirs)
-    results = pd.DataFrame(result_list)
-    if done is not None:
-        results = pd.concat([done, results])
-    results.to_csv(_RESULTS_PATH, index=False)
+        for pdb_id in todo["id"]:
+            missing.append(f"{type_}/{pdb_id}")
+    with open("results/todo.txt", "w") as stream:
+        stream.write("\n".join(missing))
 
 
 def _result(directory):
     split = directory.split("/")
-    result = {"id": split[2], "type": split[1]}
+    result = {"id": split[2]}
     result.update(_metadata(directory))
     result.update(_ccp4i(directory))
     result.update(_modelcraft(directory))
-    result.update(_modelcraft(directory, disable="sheetbend"))
-    result.update(_modelcraft(directory, disable="pruning"))
-    result.update(_modelcraft(directory, disable="parrot"))
-    result.update(_modelcraft(directory, disable="dummy-atoms"))
-    result.update(_modelcraft(directory, disable="waters"))
-    result.update(_modelcraft(directory, disable="side-chain-fixing"))
+    if split[1] == "mr":
+        result.update(_modelcraft(directory, disable="sheetbend"))
+        result.update(_modelcraft(directory, disable="pruning"))
+        result.update(_modelcraft(directory, disable="parrot"))
+        result.update(_modelcraft(directory, disable="dummy-atoms"))
+        result.update(_modelcraft(directory, disable="waters"))
+        result.update(_modelcraft(directory, disable="side-chain-fixing"))
     return result
 
 

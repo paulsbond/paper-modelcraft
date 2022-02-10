@@ -12,10 +12,13 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import scipy.stats
 
 
-_COLOURS = ["#377eb8", "#ff7f00"]
-_MARKERS = ["o", "v"]
+_COLOURS = ["#377eb8", "#ff7f00", "#4daf4a"]
+_DARKER = ["#2c6493", "#cc6500", "#3d8c3b"]
+_MARKERS = ["o", "v", "s"]
+_HATCHES = [None, "///", "..."]
 
 plt.rc("axes", titlesize=8, labelsize=8, linewidth=0.6)
 plt.rc("font", size=8, family="sans-serif")
@@ -44,8 +47,8 @@ def make_figures():
     _binned("ep_res", results_ep, 1, 3.5, "resolution", "Resolution / Å")
     _binned("mr_fmap", results_mr, 0.2, 1, "f_map_correlation", "F-map Correlation")
     _binned("ep_fmap", results_ep, 0.2, 1, "f_map_correlation", "F-map Correlation")
-    # mr_time
-    # mr_ablation
+    _time("time", results_mr)
+    _ablation("ablation", results_mr)
 
 
 def _completeness(name, results):
@@ -54,7 +57,7 @@ def _completeness(name, results):
     x = results["ccp4i_completeness"]
     y = results["modelcraft_completeness"]
     min_, max_ = (0, 1)
-    ax.plot([min_, max_], [min_, max_], "k-", alpha=0.5, linewidth=0.5)
+    ax.plot([min_, max_], [min_, max_], "k--", alpha=0.5, linewidth=0.8)
     ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
     ax.axis([min_, max_, min_, max_])
     ax.set_aspect("equal", "box")
@@ -79,9 +82,7 @@ def _binned(name, results, xmin, xmax, xkey, xlabel):
         x = data[key]["x"]
         y = data[key]["y"]
         mean, _, se, bin_center = _bin_xy(x, y)
-        ax.plot(
-            bin_center, mean, label=key, color=_COLOURS[i], marker=_MARKERS[i],
-        )
+        ax.plot(bin_center, mean, label=key, color=_COLOURS[i], marker=_MARKERS[i])
         ax.fill_between(
             bin_center,
             mean - se,
@@ -111,3 +112,104 @@ def _bin_xy(x, y, nbins=3):
     se = std / np.sqrt(n)
     return mean, std, se, bin_center
 
+
+def _time(name, results):
+    fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
+    ax = fig.add_subplot(111)
+    x = results["modelcraft_seconds"] - results["ccp4i_seconds"]
+    y = results["modelcraft_completeness"] - results["ccp4i_completeness"]
+    x = x / (60 * 60)  # Convert seconds to hours
+    min_x, max_x = _min_max(x)
+    min_y, max_y = _min_max(y)
+    ax.plot([min_x, max_x], [0, 0], "k--", alpha=0.5, linewidth=0.8)
+    ax.plot([0, 0], [min_y, max_y], "k--", alpha=0.5, linewidth=0.8)
+    ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
+    ax.axis([min_x, max_x, min_y, max_y])
+    ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    ax.set_xlabel("Extra Time / h")
+    ax.set_ylabel("Extra Completeness")
+    plt.tight_layout(pad=0.3)
+    plt.savefig(f"figures/fig_{name}.png")
+    plt.close()
+
+
+def _min_max(x, pad=0.02):
+    min_x = min(x)
+    max_x = max(x)
+    padding = (max_x - min_x) * pad
+    min_x -= padding
+    max_x += padding
+    return min_x, max_x
+
+
+def _ablation(name, results):
+    labels = [
+        "Sheetbend",
+        "Pruning",
+        "Parrot",
+        "Dummy Atom",
+        "Water",
+        "Side Chain",
+    ]
+    keys = [
+        "modelcraft_no_sheetbend",
+        "modelcraft_no_pruning",
+        "modelcraft_no_parrot",
+        "modelcraft_no_dummy_atoms",
+        "modelcraft_no_waters",
+        "modelcraft_no_side_chain_fixing",
+    ]
+    metrics = ["completeness", "rwork", "rfree"]
+    data = {label: {metric: [] for metric in metrics} for label in labels}
+    for metric in metrics:
+        for result in results.to_records():
+            for label, key in zip(labels, keys):
+                value = result[f"{key}_{metric}"] - result[f"modelcraft_{metric}"]
+                data[label][metric].append(value)
+        for label in labels:
+            data[label][metric + "_mean"] = np.mean(data[label][metric])
+            data[label][metric + "_sem"] = scipy.stats.sem(data[label][metric])
+    plot_data = {
+        "Completeness": {
+            "heights": [data[label]["completeness_mean"] for label in labels],
+            "yerr": [data[label]["completeness_sem"] for label in labels],
+        },
+        "R-work": {
+            "heights": [data[label]["rwork_mean"] for label in labels],
+            "yerr": [data[label]["rwork_sem"] for label in labels],
+        },
+        "R-free": {
+            "heights": [data[label]["rfree_mean"] for label in labels],
+            "yerr": [data[label]["rfree_sem"] for label in labels],
+        },
+    }
+    x = np.arange(len(labels))
+    fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
+    ax = fig.add_subplot(111)
+    width = 0.3
+    for i, group in enumerate(plot_data):
+        heights = plot_data[group]["heights"]
+        yerr = plot_data[group]["yerr"]
+        adjusted = x - width + i * width
+        ax.bar(
+            adjusted,
+            heights,
+            width,
+            yerr=yerr,
+            capsize=0,
+            label=group,
+            color=_COLOURS[i],
+            hatch=_HATCHES[i],
+            edgecolor=_DARKER[i],
+        )
+    plt.xticks(rotation=30)
+    ax.legend(loc="lower right")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.margins(x=0.01)
+    ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    ax.set_xlabel("Step Removed")
+    ax.set_ylabel("Mean Change")
+    plt.tight_layout(pad=0.3)
+    plt.savefig(f"figures/fig_{name}.png")
+    plt.close()

@@ -169,10 +169,10 @@ def _prepare_case(path):
         return "Different cell or space group in the structure and data"
     mc.update_cell(deposited, new_cell=fmean.cell)
     refmac = mc.RefmacXray(deposited, fmean, freer, cycles=10).run()
-    if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
-        return "R-free for deposited structure deemed too high"
     if refmac.data_completeness < 0.9:
         return "Data completeness less than 90%"
+    if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
+        return "R-free for deposited structure deemed too high"
     mr_structure = _molecular_replacement(fmean, truncated, copies[pdb_id])
     if mr_structure is None:
         return "Molecular replacement could not place all copies"

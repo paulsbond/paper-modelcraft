@@ -36,10 +36,10 @@ def _prepare_case(pdb_id):
         return "Different cell or space group in the structure and data"
     mc.update_cell(structure, new_cell=fmean.cell)
     refmac = mc.RefmacXray(structure, fmean, freer, cycles=10).run()
-    if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
-        return "R-free for deposited structure deemed too high"
     if refmac.data_completeness < 0.9:
         return "Data completeness less than 90%"
+    if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
+        return "R-free for deposited structure deemed too high"
     model_path = f"downloads/data/reduced_full/{pdb_id.upper()}/model.pdb"
     model = mc.read_structure(model_path)
     model_refmac = mc.RefmacXray(model, fmean, freer, cycles=0).run()

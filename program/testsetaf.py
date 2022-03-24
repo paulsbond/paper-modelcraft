@@ -159,10 +159,10 @@ def _prepare_case(path):
     if _any_pdb_ids_already_in_set(pdb_ids):
         return
     if len(pdb_ids) == 0:
-        return "No potential PDB entries found"
+        return "No PDB entries"
     pdb_id, truncated, deposited = _choose_pdb(pdb_ids, uniprot, alphafold)
     if pdb_id is None:
-        return "No PDB entries with superposed completeness between 20% and 90%"
+        return "No PDB entries with superposed accuracy between 20% and 90%"
     rblocks = pdbe.rblocks(pdb_id)
     fmean, freer = sfdata.fmean_rfree(rblocks[0])
     if not sfdata.compatible_cell(deposited, [fmean, freer]):
@@ -175,7 +175,7 @@ def _prepare_case(path):
         return "Data completeness less than 90%"
     mr_structure = _molecular_replacement(fmean, truncated, copies[pdb_id])
     if mr_structure is None:
-        return "None of the MR models found all copies"
+        return "Molecular replacement could not place all copies"
     molrep_refmac = mc.RefmacXray(mr_structure, fmean, freer, cycles=10).run()
     phasematch = mc.PhaseMatch(fmean, refmac.abcd, molrep_refmac.abcd).run()
     if phasematch.f_map_correlation < 0.2:

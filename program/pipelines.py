@@ -7,6 +7,7 @@ import subprocess
 import time
 import gemmi
 import modelcraft as mc
+import environ
 
 
 _LOCK = multiprocessing.Lock()
@@ -119,7 +120,8 @@ def _test_ccp4i(directory):
         subprocess.call(ccp4i_args, stdout=log_stream, stderr=log_stream)
 
 
-def run():
+def _run():
+    environ.assert_ccp4()
     print("Running pipelines...")
     dirs = glob.glob("data/af/*") + glob.glob("data/ep/*") + glob.glob("data/mr/*")
     dirs = ["data/mr/1bd9"]  # For small-scale testing
@@ -134,3 +136,7 @@ def run():
     pool.map_async(_test_ccp4i, dirs)
     pool.close()
     pool.join()
+
+
+if __name__ == "__main__":
+    _run()

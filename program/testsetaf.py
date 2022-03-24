@@ -7,6 +7,7 @@ import tarfile
 import gemmi
 import modelcraft as mc
 import solrq
+import environ
 import pdbe
 import sfdata
 import testset
@@ -184,7 +185,8 @@ def _prepare_case(path):
     mc.write_mmcif(f"{directory}/model.cif", mr_structure)
 
 
-def prepare():
+def _prepare():
+    environ.assert_ccp4()
     print("Preparing the AF testset...")
     paths = _alphafold_mmcif_paths()
     paths = [  # For small-scale testing
@@ -195,3 +197,7 @@ def prepare():
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, paths)
     testset.write_failures_table("prep_failures_af.txt", failures)
+
+
+if __name__ == "__main__":
+    _prepare()

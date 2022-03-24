@@ -14,7 +14,7 @@ import pdbe
 import ncacstat
 
 
-def gather():
+def _gather():
     os.makedirs("results", exist_ok=True)
     missing = []
     for type_ in ("af", "ep", "mr"):
@@ -149,3 +149,7 @@ def _minimal_doc(structure):
     groups.scale = True
     groups.atoms = True
     return structure.make_mmcif_document(groups)
+
+
+if __name__ == "__main__":
+    _gather()

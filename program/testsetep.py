@@ -3,6 +3,7 @@
 import multiprocessing
 import os
 import modelcraft as mc
+import environ
 import pdbe
 import sfdata
 import testset
@@ -48,10 +49,15 @@ def _prepare_case(pdb_id):
     testset.write_case(pdb_id, directory, refmac, phasematch, fmean, freer, phases)
 
 
-def prepare():
+def _prepare():
+    environ.assert_ccp4()
     print("Preparing the EP testset...")
     pdb_ids = _search_for_pdb_ids()
     pdb_ids = {"1o6a", "2o7t", "4yme"}  # For small-scale testing
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, pdb_ids)
     testset.write_failures_table("prep_failures_ep.txt", failures)
+
+
+if __name__ == "__main__":
+    _prepare()

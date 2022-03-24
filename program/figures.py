@@ -27,7 +27,7 @@ plt.rc("xtick", labelsize=8)
 plt.rc("ytick", labelsize=8)
 
 
-def make_figures():
+def _make_figures():
     print("Making figures...")
     os.makedirs("figures", exist_ok=True)
     results_mr = pd.read_csv("results/results_mr.csv")
@@ -213,3 +213,7 @@ def _ablation(name, results):
     plt.tight_layout(pad=0.3)
     plt.savefig(f"figures/fig_{name}.png")
     plt.close()
+
+
+if __name__ == "__main__":
+    _make_figures()

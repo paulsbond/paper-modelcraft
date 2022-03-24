@@ -3,6 +3,7 @@ import os
 import shutil
 import tarfile
 import modelcraft as mc
+import environ
 import pdbe
 import sfdata
 import testset
@@ -49,10 +50,15 @@ def _prepare_case(pdb_id):
     shutil.copy(model_path, f"{directory}/model.pdb")
 
 
-def prepare():
+def _prepare():
+    environ.assert_ccp4()
     print("Preparing the MR testset...")
     pdb_ids = _pdb_ids()
     pdb_ids = ["1bd9", "1bjn", "1e24"]  # For small-scale testing
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, pdb_ids)
     testset.write_failures_table("prep_failures_mr.txt", failures)
+
+
+if __name__ == "__main__":
+    _prepare()

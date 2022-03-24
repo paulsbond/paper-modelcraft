@@ -16,7 +16,7 @@ def write_case(
     fmean,
     freer,
     phases=None,
-    superposed_accuracy=None,
+    superposed_similarity=None,
 ):
     with _LOCK:
         contents = mc.entry_contents(pdb_id)
@@ -27,8 +27,8 @@ def write_case(
         "deposited_rwork": refmac.rwork,
         "f_map_correlation": phasematch.f_map_correlation,
     }
-    if superposed_accuracy is not None:
-        metadata["superposed_accuracy"] = superposed_accuracy
+    if superposed_similarity is not None:
+        metadata["superposed_similarity"] = superposed_similarity
     data_mtz = os.path.join(directory, "data.mtz")
     contents_json = os.path.join(directory, "contents.json")
     sequence_fasta = os.path.join(directory, "sequence.fasta")

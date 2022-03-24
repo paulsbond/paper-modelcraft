@@ -70,7 +70,7 @@ def _truncate_alphafold(alphafold, residues):
     return structure
 
 
-def _superposed_accuracy(truncated, deposited, label_asym_id):
+def _superposed_similarity(truncated, deposited, label_asym_id):
     ref_polymer = deposited[0].get_subchain(label_asym_id)
     wrk_polymer = truncated[0].get_subchain("A")
     sup = gemmi.calculate_superposition(
@@ -98,7 +98,7 @@ def _superposed_accuracy(truncated, deposited, label_asym_id):
 def _choose_pdb(pdb_ids, uniprot, alphafold):
     uniprot_data = pdbe.uniprot_data(uniprot)
     chosen_pdb_id = None
-    chosen_accuracy = 0.9
+    chosen_similarity = 0.9
     chosen_truncated = None
     chosen_deposited = None
     for pdb_id in pdb_ids & uniprot_data.keys():
@@ -108,13 +108,13 @@ def _choose_pdb(pdb_ids, uniprot, alphafold):
             continue
         deposited = pdbe.structure(pdb_id)
         best_chain = entry_data["bestChainId"]
-        accuracy = _superposed_accuracy(truncated, deposited, best_chain)
-        if 0.2 <= accuracy <= chosen_accuracy:
+        similarity = _superposed_similarity(truncated, deposited, best_chain)
+        if 0.2 <= similarity <= chosen_similarity:
             chosen_pdb_id = pdb_id
-            chosen_accuracy = accuracy
+            chosen_similarity = similarity
             chosen_truncated = truncated
             chosen_deposited = deposited
-    return chosen_pdb_id, chosen_truncated, chosen_deposited, chosen_accuracy
+    return chosen_pdb_id, chosen_truncated, chosen_deposited, chosen_similarity
 
 
 def _make_search_structures(structure):
@@ -160,9 +160,9 @@ def _prepare_case(path):
         return
     if len(pdb_ids) == 0:
         return "No PDB entries"
-    pdb_id, truncated, deposited, accuracy = _choose_pdb(pdb_ids, uniprot, alphafold)
+    pdb_id, truncated, deposited, similarity = _choose_pdb(pdb_ids, uniprot, alphafold)
     if pdb_id is None:
-        return "No PDB entries with superposed accuracy between 20% and 90%"
+        return "No PDB entries with superposed similarity between 20% and 90%"
     rblocks = pdbe.rblocks(pdb_id)
     fmean, freer = sfdata.fmean_rfree(rblocks[0])
     if not sfdata.compatible_cell(deposited, [fmean, freer]):
@@ -188,7 +188,7 @@ def _prepare_case(path):
         phasematch,
         fmean,
         freer,
-        superposed_accuracy=accuracy,
+        superposed_similarity=similarity,
     )
     mc.write_mmcif(f"{directory}/model.cif", mr_structure)
 

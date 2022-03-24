@@ -70,7 +70,7 @@ def _truncate_alphafold(alphafold, residues):
     return structure
 
 
-def _superposed_completeness(truncated, deposited, label_asym_id):
+def _superposed_accuracy(truncated, deposited, label_asym_id):
     ref_polymer = deposited[0].get_subchain(label_asym_id)
     wrk_polymer = truncated[0].get_subchain("A")
     sup = gemmi.calculate_superposition(
@@ -98,7 +98,7 @@ def _superposed_completeness(truncated, deposited, label_asym_id):
 def _choose_pdb(pdb_ids, uniprot, alphafold):
     uniprot_data = pdbe.uniprot_data(uniprot)
     chosen_pdb_id = None
-    chosen_completeness = 0.9
+    chosen_accuracy = 0.9
     chosen_truncated = None
     chosen_deposited = None
     for pdb_id in pdb_ids & uniprot_data.keys():
@@ -108,10 +108,10 @@ def _choose_pdb(pdb_ids, uniprot, alphafold):
             continue
         deposited = pdbe.structure(pdb_id)
         best_chain = entry_data["bestChainId"]
-        completeness = _superposed_completeness(truncated, deposited, best_chain)
-        if 0.2 < completeness < chosen_completeness:
+        accuracy = _superposed_accuracy(truncated, deposited, best_chain)
+        if 0.2 <= accuracy <= chosen_accuracy:
             chosen_pdb_id = pdb_id
-            chosen_completeness = completeness
+            chosen_accuracy = accuracy
             chosen_truncated = truncated
             chosen_deposited = deposited
     return chosen_pdb_id, chosen_truncated, chosen_deposited

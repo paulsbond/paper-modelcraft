@@ -114,7 +114,7 @@ def _choose_pdb(pdb_ids, uniprot, alphafold):
             chosen_accuracy = accuracy
             chosen_truncated = truncated
             chosen_deposited = deposited
-    return chosen_pdb_id, chosen_truncated, chosen_deposited
+    return chosen_pdb_id, chosen_truncated, chosen_deposited, chosen_accuracy
 
 
 def _make_search_structures(structure):
@@ -160,7 +160,7 @@ def _prepare_case(path):
         return
     if len(pdb_ids) == 0:
         return "No PDB entries"
-    pdb_id, truncated, deposited = _choose_pdb(pdb_ids, uniprot, alphafold)
+    pdb_id, truncated, deposited, accuracy = _choose_pdb(pdb_ids, uniprot, alphafold)
     if pdb_id is None:
         return "No PDB entries with superposed accuracy between 20% and 90%"
     rblocks = pdbe.rblocks(pdb_id)
@@ -181,7 +181,15 @@ def _prepare_case(path):
     if phasematch.f_map_correlation < 0.2:
         return "F-map correlation less than 0.2"
     directory = os.path.join("data", "af", pdb_id)
-    testset.write_case(pdb_id, directory, refmac, phasematch, fmean, freer)
+    testset.write_case(
+        pdb_id,
+        directory,
+        refmac,
+        phasematch,
+        fmean,
+        freer,
+        superposed_accuracy=accuracy,
+    )
     mc.write_mmcif(f"{directory}/model.cif", mr_structure)
 
 

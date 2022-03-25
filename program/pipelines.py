@@ -34,8 +34,6 @@ def _model_path(directory):
 
 
 def _test_modelcraft(directory, disable=None):
-    if disable is not None and directory.split("/")[1] != "mr":
-        return
     modelcraft_dirname = f"modelcraft-no-{disable}" if disable else "modelcraft"
     modelcraft_dir = os.path.join(directory, modelcraft_dirname)
     if os.path.exists(modelcraft_dir):
@@ -123,17 +121,20 @@ def _test_ccp4i(directory):
 def _run():
     environ.assert_ccp4()
     print("Running pipelines...")
-    dirs = glob.glob("data/af/*") + glob.glob("data/ep/*") + glob.glob("data/mr/*")
-    dirs = ["data/mr/1bd9"]  # For small-scale testing
+    ep_dirs = glob.glob("data/ep/*")
+    mr_dirs = glob.glob("data/mr/*")
+    af_dirs = glob.glob("data/af/*")
+    all_dirs = ep_dirs + mr_dirs + af_dirs
+    all_dirs = ["data/mr/1bd9"]  # For small-scale testing
     pool = multiprocessing.Pool()
-    pool.map_async(_test_modelcraft, dirs)
-    pool.map_async(_test_modelcraft_no_sheetbend, dirs)
-    pool.map_async(_test_modelcraft_no_pruning, dirs)
-    pool.map_async(_test_modelcraft_no_parrot, dirs)
-    pool.map_async(_test_modelcraft_no_dummy_atoms, dirs)
-    pool.map_async(_test_modelcraft_no_waters, dirs)
-    pool.map_async(_test_modelcraft_no_side_chain_fixing, dirs)
-    pool.map_async(_test_ccp4i, dirs)
+    pool.map_async(_test_modelcraft, all_dirs)
+    pool.map_async(_test_modelcraft_no_sheetbend, mr_dirs)
+    pool.map_async(_test_modelcraft_no_pruning, mr_dirs)
+    pool.map_async(_test_modelcraft_no_parrot, mr_dirs)
+    pool.map_async(_test_modelcraft_no_dummy_atoms, mr_dirs)
+    pool.map_async(_test_modelcraft_no_waters, mr_dirs)
+    pool.map_async(_test_modelcraft_no_side_chain_fixing, mr_dirs)
+    pool.map_async(_test_ccp4i, all_dirs)
     pool.close()
     pool.join()
 

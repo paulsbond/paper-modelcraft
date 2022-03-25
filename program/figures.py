@@ -62,7 +62,7 @@ def _completeness(name, results):
     ax.axis([min_, max_, min_, max_])
     ax.set_aspect("equal", "box")
     ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
-    ax.set_xlabel("CCP4i Completeness")
+    ax.set_xlabel("CCP4i Buccaneer Completeness")
     ax.set_ylabel("ModelCraft Completeness")
     plt.tight_layout(pad=0.3)
     plt.savefig(f"figures/fig_{name}.png")
@@ -72,12 +72,12 @@ def _completeness(name, results):
 def _binned(name, results, xmin, xmax, xkey, xlabel):
     fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
     ax = fig.add_subplot(111)
-    data = {"ModelCraft": {"x": [], "y": []}, "CCP4i": {"x": [], "y": []}}
+    data = {"ModelCraft": {"x": [], "y": []}, "CCP4i Buccaneer": {"x": [], "y": []}}
     for row in results.to_records():
         data["ModelCraft"]["x"].append(row[xkey])
         data["ModelCraft"]["y"].append(row["modelcraft_completeness"])
-        data["CCP4i"]["x"].append(row[xkey])
-        data["CCP4i"]["y"].append(row["ccp4i_completeness"])
+        data["CCP4i Buccaneer"]["x"].append(row[xkey])
+        data["CCP4i Buccaneer"]["y"].append(row["ccp4i_completeness"])
     for i, key in enumerate(data):
         x = data[key]["x"]
         y = data[key]["y"]

@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats
+from matplotlib.ticker import ScalarFormatter
 
 
 _COLOURS = ["#377eb8", "#ff7f00", "#4daf4a"]
@@ -40,109 +41,65 @@ def _make_figures():
         print("MR:", len(results_mr), file=stream)
         print("EP:", len(results_ep), file=stream)
         print("AF:", len(results_af), file=stream)
-    _completeness("mr", results_mr)
-    _completeness("ep", results_ep)
-    _completeness("af", results_af)
-    _binned("mr_res", results_mr, 1, 3.5, "resolution", "Resolution / Å")
-    _binned("ep_res", results_ep, 1, 3.5, "resolution", "Resolution / Å")
-    _binned("mr_fmap", results_mr, 0.2, 1, "f_map_correlation", "F-map Correlation")
-    _binned("ep_fmap", results_ep, 0.2, 1, "f_map_correlation", "F-map Correlation")
-    _time("time", results_mr)
-    _ablation("ablation", results_mr)
+    _mrep(results_mr, results_ep)
+    _af(results_af)
+    _time(results_mr)
+    _ablation(results_mr)
 
 
-def _completeness(name, results):
-    fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
-    ax = fig.add_subplot(111)
-    x = results["ccp4i_completeness"]
-    y = results["modelcraft_completeness"]
-    min_, max_ = (0, 1)
-    ax.plot([min_, max_], [min_, max_], "k--", alpha=0.5, linewidth=0.8)
-    ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
-    ax.axis([min_, max_, min_, max_])
-    ax.set_aspect("equal", "box")
-    ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
-    ax.set_xlabel("CCP4i Buccaneer Completeness")
-    ax.set_ylabel("ModelCraft Completeness")
+def _mrep(results_mr, results_ep):
+    _, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(
+        nrows=3,
+        ncols=2,
+        gridspec_kw={"height_ratios": [1.8, 1, 1]},
+        figsize=(18 / 2.54, 20 / 2.54),
+        dpi=600,
+    )
+    for ax, results, title in (
+        (ax1, results_mr, "Molecular Replacement"),
+        (ax2, results_ep, "Experimental Phasing"),
+    ):
+        _raw_completness(ax, results)
+        ax.set_title(title)
+    for ax, results, xkey, xlabel, xmin, xmax in (
+        (ax3, results_mr, "resolution", "Resolution / Å", 3.5, 1.0),
+        (ax4, results_ep, "resolution", "Resolution / Å", 3.5, 1.0),
+        (ax5, results_mr, "f_map_correlation", "F-map Correlation", 0.2, 1.0),
+        (ax6, results_ep, "f_map_correlation", "F-map Correlation", 0.2, 1.0),
+    ):
+        _binned_completeness(ax, results, xkey, xlabel, xmin, xmax)
     plt.tight_layout(pad=0.3)
-    plt.savefig(f"figures/fig_{name}.png")
+    plt.savefig("figures/fig_mrep.png")
     plt.close()
 
 
-def _binned(name, results, xmin, xmax, xkey, xlabel):
+def _af(results):
     fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
     ax = fig.add_subplot(111)
-    data = {"ModelCraft": {"x": [], "y": []}, "CCP4i Buccaneer": {"x": [], "y": []}}
-    for row in results.to_records():
-        data["ModelCraft"]["x"].append(row[xkey])
-        data["ModelCraft"]["y"].append(row["modelcraft_completeness"])
-        data["CCP4i Buccaneer"]["x"].append(row[xkey])
-        data["CCP4i Buccaneer"]["y"].append(row["ccp4i_completeness"])
-    for i, key in enumerate(data):
-        x = data[key]["x"]
-        y = data[key]["y"]
-        mean, _, se, bin_center = _bin_xy(x, y)
-        ax.plot(bin_center, mean, label=key, color=_COLOURS[i], marker=_MARKERS[i])
-        ax.fill_between(
-            bin_center,
-            mean - se,
-            mean + se,
-            alpha=0.5,
-            color=_COLOURS[i],
-            linewidth=0.0,
-        )
-    ax.axis([xmin, xmax, 0, 1])
-    ax.legend()
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel("Completeness")
+    _raw_completness(ax, results)
     plt.tight_layout(pad=0.3)
-    plt.savefig(f"figures/fig_{name}.png")
+    plt.savefig("figures/fig_af.png")
     plt.close()
 
 
-def _bin_xy(x, y, nbins=3):
-    x = np.array(x)
-    y = np.array(y)
-    n, bin_edges = np.histogram(x, bins=nbins)
-    sy, bin_edges = np.histogram(x, bins=nbins, weights=y)
-    sy2, bin_edges = np.histogram(x, bins=nbins, weights=y * y)
-    bin_center = (bin_edges[1:] + bin_edges[:-1]) / 2
-    mean = sy / n
-    std = np.sqrt(sy2 / (n - 1) - mean * mean)
-    se = std / np.sqrt(n)
-    return mean, std, se, bin_center
-
-
-def _time(name, results):
+def _time(results):
     fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
     ax = fig.add_subplot(111)
     x = results["modelcraft_seconds"] - results["ccp4i_seconds"]
     y = results["modelcraft_completeness"] - results["ccp4i_completeness"]
     x = x / (60 * 60)  # Convert seconds to hours
-    min_x, max_x = _min_max(x)
-    min_y, max_y = _min_max(y)
-    ax.plot([min_x, max_x], [0, 0], "k--", alpha=0.5, linewidth=0.8)
-    ax.plot([0, 0], [min_y, max_y], "k--", alpha=0.5, linewidth=0.8)
     ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
-    ax.axis([min_x, max_x, min_y, max_y])
+    ax.set_xscale("log")
+    ax.xaxis.set_major_formatter(ScalarFormatter())
     ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
     ax.set_xlabel("Extra Time / h")
     ax.set_ylabel("Extra Completeness")
     plt.tight_layout(pad=0.3)
-    plt.savefig(f"figures/fig_{name}.png")
+    plt.savefig("figures/fig_time.png")
     plt.close()
 
 
-def _min_max(x, pad=0.02):
-    min_x = min(x)
-    max_x = max(x)
-    padding = (max_x - min_x) * pad
-    min_x -= padding
-    max_x += padding
-    return min_x, max_x
-
-
-def _ablation(name, results):
+def _ablation(results):
     labels = [
         "Sheetbend",
         "Pruning",
@@ -211,8 +168,60 @@ def _ablation(name, results):
     ax.set_xlabel("Step Removed")
     ax.set_ylabel("Mean Change")
     plt.tight_layout(pad=0.3)
-    plt.savefig(f"figures/fig_{name}.png")
+    plt.savefig("figures/fig_ablation.png")
     plt.close()
+
+
+def _raw_completness(ax, results):
+    x = results["ccp4i_completeness"]
+    y = results["modelcraft_completeness"]
+    min_, max_ = (0, 1)
+    ax.plot([min_, max_], [min_, max_], "k--", alpha=0.5, linewidth=0.8)
+    ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
+    ax.axis([min_, max_, min_, max_])
+    ax.set_aspect("equal", "box")
+    ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    ax.set_xlabel("CCP4i Buccaneer Completeness")
+    ax.set_ylabel("ModelCraft Completeness")
+
+
+def _binned_completeness(ax, results, xkey, xlabel, xmin, xmax):
+    data = {"ModelCraft": {"x": [], "y": []}, "CCP4i Buccaneer": {"x": [], "y": []}}
+    for row in results.to_records():
+        data["ModelCraft"]["x"].append(row[xkey])
+        data["ModelCraft"]["y"].append(row["modelcraft_completeness"])
+        data["CCP4i Buccaneer"]["x"].append(row[xkey])
+        data["CCP4i Buccaneer"]["y"].append(row["ccp4i_completeness"])
+    for i, key in enumerate(data):
+        x = data[key]["x"]
+        y = data[key]["y"]
+        mean, _, se, bin_center = _bin_xy(x, y)
+        ax.plot(bin_center, mean, label=key, color=_COLOURS[i], marker=_MARKERS[i])
+        ax.fill_between(
+            bin_center,
+            mean - se,
+            mean + se,
+            alpha=0.5,
+            color=_COLOURS[i],
+            linewidth=0.0,
+        )
+    ax.axis([xmin, xmax, 0, 1])
+    ax.legend(loc="lower right")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Completeness")
+
+
+def _bin_xy(x, y, nbins=3):
+    x = np.array(x)
+    y = np.array(y)
+    n, bin_edges = np.histogram(x, bins=nbins)
+    sy, bin_edges = np.histogram(x, bins=nbins, weights=y)
+    sy2, bin_edges = np.histogram(x, bins=nbins, weights=y * y)
+    bin_center = (bin_edges[1:] + bin_edges[:-1]) / 2
+    mean = sy / n
+    std = np.sqrt(sy2 / (n - 1) - mean * mean)
+    se = std / np.sqrt(n)
+    return mean, std, se, bin_center
 
 
 if __name__ == "__main__":

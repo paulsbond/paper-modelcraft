@@ -159,7 +159,7 @@ def _ablation(results):
             hatch=_HATCHES[i],
             edgecolor=_DARKER[i],
         )
-    plt.xticks(rotation=30)
+    plt.xticks(rotation=40)
     ax.legend(loc="lower right")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)

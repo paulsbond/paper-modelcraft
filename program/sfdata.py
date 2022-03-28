@@ -21,7 +21,10 @@ def fmean_rfree(rblock):
 def phases(rblocks):
     cif2mtz = gemmi.CifToMtz()
     for rblock in rblocks:
-        mtz = cif2mtz.convert_block_to_mtz(rblock)
+        try:
+            mtz = cif2mtz.convert_block_to_mtz(rblock)
+        except RuntimeError:  # Can occur if data not found in block
+            continue
         abcd = next(mc.DataItem.search(mtz, "AAAA"), None)
         if abcd is not None:
             return abcd

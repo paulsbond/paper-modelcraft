@@ -53,7 +53,6 @@ def _prepare():
     environ.assert_ccp4()
     print("Preparing the EP testset...")
     pdb_ids = _search_for_pdb_ids()
-    pdb_ids = {"1o6a", "2o7t", "4yme"}  # For small-scale testing
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, pdb_ids)
     testset.write_failures_table("prep_failures_ep.txt", failures)

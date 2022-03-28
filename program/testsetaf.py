@@ -197,11 +197,6 @@ def _prepare():
     environ.assert_ccp4()
     print("Preparing the AF testset...")
     paths = _alphafold_mmcif_paths()
-    paths = [  # For small-scale testing
-        "downloads/data/alphafold/AF-P10827-F1-model_v2.cif.gz",
-        "downloads/data/alphafold/AF-P59666-F1-model_v2.cif.gz",
-        "downloads/data/alphafold/AF-Q9H3H5-F1-model_v2.cif.gz",
-    ]
     pool = multiprocessing.Pool()
     failures = pool.map(_prepare_case, paths)
     testset.write_failures_table("prep_failures_af.txt", failures)

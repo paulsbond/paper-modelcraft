@@ -125,7 +125,6 @@ def _run():
     mr_dirs = glob.glob("data/mr/*")
     af_dirs = glob.glob("data/af/*")
     all_dirs = ep_dirs + mr_dirs + af_dirs
-    all_dirs = ["data/mr/1bd9"]  # For small-scale testing
     pool = multiprocessing.Pool()
     pool.map_async(_test_modelcraft, all_dirs)
     pool.map_async(_test_modelcraft_no_sheetbend, mr_dirs)

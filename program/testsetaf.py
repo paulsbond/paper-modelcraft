@@ -106,7 +106,10 @@ def _choose_pdb(pdb_ids, uniprot, alphafold):
         truncated = _truncate_alphafold(alphafold, entry_data["residues"])
         if truncated is None:
             continue
-        deposited = pdbe.structure(pdb_id)
+        try:
+            deposited = pdbe.structure(pdb_id)
+        except ValueError:
+            continue
         best_chain = entry_data["bestChainId"]
         similarity = _superposed_similarity(truncated, deposited, best_chain)
         if 0.2 <= similarity <= chosen_similarity:

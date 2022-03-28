@@ -42,6 +42,7 @@ def write_case(
 
 
 def write_failures_table(filename, failures):
+    os.makedirs("table", exist_ok=True)
     path = f"tables/{filename}"
     counter = collections.Counter(failures)
     with open(path, "w") as stream:

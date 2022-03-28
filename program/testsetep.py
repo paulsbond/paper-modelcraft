@@ -29,10 +29,7 @@ def _prepare_case(pdb_id):
     directory = os.path.join("data", "ep", pdb_id)
     if os.path.exists(directory):
         return None
-    try:
-        structure = pdbe.structure(pdb_id)
-    except ValueError:
-        return "Could not read the deposited structure"
+    structure = pdbe.structure(pdb_id)
     rblocks = pdbe.rblocks(pdb_id)
     fmean, freer = sfdata.fmean_rfree(rblocks[0])
     phases = sfdata.phases(rblocks)

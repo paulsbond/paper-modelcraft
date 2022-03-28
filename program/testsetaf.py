@@ -168,7 +168,10 @@ def _prepare_case(path):
     if not sfdata.compatible_cell(deposited, [fmean, freer]):
         return "Different cell or space group in the structure and data"
     mc.update_cell(deposited, new_cell=fmean.cell)
-    refmac = mc.RefmacXray(deposited, fmean, freer, cycles=10).run()
+    try:
+        refmac = mc.RefmacXray(deposited, fmean, freer, cycles=10).run()
+    except ValueError:
+        return "Refmac failure"
     if refmac.data_completeness < 0.9:
         return "Data completeness less than 90%"
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:

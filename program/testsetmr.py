@@ -61,6 +61,7 @@ def _prepare():
     environ.assert_ccp4()
     print("Preparing the MR testset...")
     pdb_ids = _pdb_ids()
+    print(f"Found {len(pdb_ids)} potential entries")
     pool = multiprocessing.Pool()
     pool.map(_prepare_case, pdb_ids)
 

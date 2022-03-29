@@ -196,6 +196,7 @@ def _prepare():
     environ.assert_ccp4()
     print("Preparing the AF testset...")
     paths = _alphafold_mmcif_paths()
+    print(f"Found {len(paths)} potential entries")
     pool = multiprocessing.Pool()
     pool.map(_prepare_case, paths)
 

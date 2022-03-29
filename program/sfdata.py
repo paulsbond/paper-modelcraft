@@ -38,8 +38,9 @@ def compatible_cell(structure, mtzs):
     )
     for mtz in mtzs:
         if (
-            mc.max_cell_distortion(old_cell=structure.cell, new_cell=mtz.cell) > 0.05
+            mtz.spacegroup is None  # e.g. 4zys
             or structure_spacegroup.number != mtz.spacegroup.number
+            or mc.max_cell_distortion(old_cell=structure.cell, new_cell=mtz.cell) > 0.05
         ):
             return False
     return True

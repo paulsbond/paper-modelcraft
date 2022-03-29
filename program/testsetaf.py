@@ -44,14 +44,6 @@ def _get_potential_pdbs(uniprot):
     return pdb_ids, copies
 
 
-def _any_pdb_ids_already_in_set(pdb_ids):
-    for pdb_id in pdb_ids:
-        directory = os.path.join("data", "af", pdb_id)
-        if os.path.exists(directory):
-            return True
-    return False
-
-
 def _truncate_alphafold(alphafold, residues):
     structure = alphafold.clone()
     chain = structure[0][0]
@@ -147,43 +139,47 @@ def _molecular_replacement(fmean, truncated, copies):
     return best_structure
 
 
+def _fail(key, reason):
+    testset.write_failure("af", key, reason)
+
+
 def _prepare_case(path):
     doc = gemmi.cif.read(path)
     block = doc.sole_block()
     uniprot = block.find_value("_ma_target_ref_db_details.db_accession")
+    directory = os.path.join("data", "af", uniprot)
+    if os.path.exists(directory) or testset.already_failed("ep", uniprot):
+        return
     end = int(block.find_value("_ma_target_ref_db_details.seq_db_align_end"))
     if end == 1400:
-        return "File contains residues 1-1400 of a (probably) longer sequence"
+        return _fail(uniprot, "File contains residues 1-1400 of a longer sequence")
     alphafold = mc.read_structure(path)
     pdb_ids, copies = _get_potential_pdbs(uniprot)
-    if _any_pdb_ids_already_in_set(pdb_ids):
-        return
     if len(pdb_ids) == 0:
-        return "No PDB entries"
+        return _fail(uniprot, "No PDB entries")
     pdb_id, truncated, deposited, similarity = _choose_pdb(pdb_ids, uniprot, alphafold)
     if pdb_id is None:
-        return "No PDB entries with superposed similarity between 20% and 90%"
+        return _fail(uniprot, "No PDB entries with similarity between 20% and 90%")
     rblocks = pdbe.rblocks(pdb_id)
     fmean, freer = sfdata.fmean_rfree(rblocks[0])
     if not sfdata.compatible_cell(deposited, [fmean, freer]):
-        return "Different cell or space group in the structure and data"
+        return _fail(uniprot, "Different cell or space group in the structure and data")
     mc.update_cell(deposited, new_cell=fmean.cell)
     try:
         refmac = mc.RefmacXray(deposited, fmean, freer, cycles=10).run()
     except ValueError:
-        return "Refmac failure"
+        return _fail(uniprot, "Refmac failure")
     if refmac.data_completeness < 0.9:
-        return "Data completeness less than 90%"
+        return _fail(uniprot, "Data completeness less than 90%")
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
-        return "R-free for deposited structure deemed too high"
+        return _fail(uniprot, "R-free for deposited structure deemed too high")
     mr_structure = _molecular_replacement(fmean, truncated, copies[pdb_id])
     if mr_structure is None:
-        return "Molecular replacement could not place all copies"
+        return _fail(uniprot, "Molecular replacement could not place all copies")
     molrep_refmac = mc.RefmacXray(mr_structure, fmean, freer, cycles=10).run()
     phasematch = mc.PhaseMatch(fmean, refmac.abcd, molrep_refmac.abcd).run()
     if phasematch.f_map_correlation < 0.2:
-        return "F-map correlation less than 0.2"
-    directory = os.path.join("data", "af", pdb_id)
+        return _fail(uniprot, "F-map correlation less than 0.2")
     testset.write_case(
         pdb_id,
         directory,
@@ -201,8 +197,7 @@ def _prepare():
     print("Preparing the AF testset...")
     paths = _alphafold_mmcif_paths()
     pool = multiprocessing.Pool()
-    failures = pool.map(_prepare_case, paths)
-    testset.write_failures_table("prep_failures_af.txt", failures)
+    pool.map(_prepare_case, paths)
 
 
 if __name__ == "__main__":

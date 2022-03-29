@@ -1,4 +1,3 @@
-import collections
 import json
 import multiprocessing
 import os
@@ -6,6 +5,7 @@ import modelcraft as mc
 
 
 _LOCK = multiprocessing.Lock()
+_FAILURES_PATH = "failures.json"
 
 
 def write_case(
@@ -21,6 +21,7 @@ def write_case(
     with _LOCK:
         contents = mc.entry_contents(pdb_id)
     metadata = {
+        "pdb_id": pdb_id,
         "data_resolution": refmac.resolution_high,
         "data_completeness": refmac.data_completeness,
         "deposited_rfree": refmac.rfree,
@@ -41,10 +42,21 @@ def write_case(
         json.dump(metadata, stream, indent=4)
 
 
-def write_failures_table(filename, failures):
-    os.makedirs("tables", exist_ok=True)
-    path = f"tables/{filename}"
-    counter = collections.Counter(failures)
-    with open(path, "w") as stream:
-        for failure, count in counter.most_common():
-            print(count, failure, file=stream)
+def already_failed(subset, key):
+    with _LOCK:
+        if os.path.exists(_FAILURES_PATH):
+            with open(_FAILURES_PATH) as stream:
+                failures = json.load(stream)
+            return key in failures.get(subset, {})
+    return False
+
+
+def write_failure(subset, key, reason):
+    with _LOCK:
+        failures = {}
+        if os.path.exists(_FAILURES_PATH):
+            with open(_FAILURES_PATH) as stream:
+                failures = json.load(stream)
+        failures.setdefault(subset, {})[key] = reason
+        with open(_FAILURES_PATH, "w") as stream:
+            json.dump(failures, stream, indent=4)

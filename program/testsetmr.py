@@ -25,30 +25,34 @@ def _pdb_ids():
     return [pdb_id.lower() for pdb_id in os.listdir(directory)]
 
 
+def _fail(key, reason):
+    testset.write_failure("mr", key, reason)
+
+
 def _prepare_case(pdb_id):
     directory = os.path.join("data", "mr", pdb_id)
-    if os.path.exists(directory):
-        return None
+    if os.path.exists(directory) or testset.already_failed("mr", pdb_id):
+        return
     structure = pdbe.structure(pdb_id)
     rblocks = pdbe.rblocks(pdb_id)
     fmean, freer = sfdata.fmean_rfree(rblocks[0])
     if not sfdata.compatible_cell(structure, [fmean, freer]):
-        return "Different cell or space group in the structure and data"
+        return _fail(pdb_id, "Different cell or space group in the structure and data")
     mc.update_cell(structure, new_cell=fmean.cell)
     try:
         refmac = mc.RefmacXray(structure, fmean, freer, cycles=10).run()
     except ValueError:
-        return "Refmac failure"
+        return _fail(pdb_id, "Refmac failure")
     if refmac.data_completeness < 0.9:
-        return "Data completeness less than 90%"
+        return _fail(pdb_id, "Data completeness less than 90%")
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
-        return "R-free for deposited structure deemed too high"
+        return _fail(pdb_id, "R-free for deposited structure deemed too high")
     model_path = f"downloads/data/reduced_full/{pdb_id.upper()}/model.pdb"
     model = mc.read_structure(model_path)
     model_refmac = mc.RefmacXray(model, fmean, freer, cycles=0).run()
     phasematch = mc.PhaseMatch(fmean, model_refmac.abcd, refmac.abcd).run()
     if phasematch.f_map_correlation < 0.2:
-        return "F-map correlation less than 0.2"
+        return _fail(pdb_id, "F-map correlation less than 0.2")
     testset.write_case(pdb_id, directory, refmac, phasematch, fmean, freer)
     shutil.copy(model_path, f"{directory}/model.pdb")
 
@@ -58,8 +62,7 @@ def _prepare():
     print("Preparing the MR testset...")
     pdb_ids = _pdb_ids()
     pool = multiprocessing.Pool()
-    failures = pool.map(_prepare_case, pdb_ids)
-    testset.write_failures_table("prep_failures_mr.txt", failures)
+    pool.map(_prepare_case, pdb_ids)
 
 
 if __name__ == "__main__":

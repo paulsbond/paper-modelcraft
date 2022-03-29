@@ -17,9 +17,9 @@ import ncacstat
 def _gather():
     os.makedirs("results", exist_ok=True)
     missing = []
-    for type_ in ("af", "ep", "mr"):
-        print(f"Gathering {type_.upper()} results...")
-        results_path = f"results/results_{type_}.csv"
+    for subset in ("af", "ep", "mr"):
+        print(f"Gathering {subset.upper()} results...")
+        results_path = f"results/results_{subset}.csv"
         done = None
         if os.path.exists(results_path):
             results = pd.read_csv(results_path)
@@ -27,7 +27,7 @@ def _gather():
             done = results[~results.isnull().any(axis=1)]
             dirs = [f"data/{row['type']}/{row['id']}" for row in todo.to_records()]
         else:
-            dirs = glob.glob(f"data/{type_}/*")
+            dirs = glob.glob(f"data/{subset}/*")
         pool = multiprocessing.Pool()
         result_list = pool.map(_result, dirs)
         results = pd.DataFrame(result_list)
@@ -35,8 +35,8 @@ def _gather():
             results = pd.concat([done, results])
         results.to_csv(results_path, index=False)
         todo = results[results.isnull().any(axis=1)]
-        for pdb_id in todo["id"]:
-            missing.append(f"{type_}/{pdb_id}")
+        for id_ in todo["id"]:
+            missing.append(f"{subset}/{id_}")
     with open("results/todo.txt", "w") as stream:
         stream.write("\n".join(missing))
 
@@ -61,11 +61,10 @@ def _metadata(directory):
     resolution = None
     f_map_correlation = None
     metadata_path = f"{directory}/metadata.json"
-    if os.path.exists(metadata_path):
-        with open(metadata_path) as stream:
-            metadata = json.load(stream)
-        resolution = metadata["data_resolution"]
-        f_map_correlation = metadata["f_map_correlation"]
+    with open(metadata_path) as stream:
+        metadata = json.load(stream)
+    resolution = metadata["data_resolution"]
+    f_map_correlation = metadata["f_map_correlation"]
     return {"resolution": resolution, "f_map_correlation": f_map_correlation}
 
 
@@ -76,6 +75,13 @@ def _result_dict(key, completeness, rwork, rfree, seconds):
         f"{key}_rfree": rfree,
         f"{key}_seconds": seconds,
     }
+
+
+def _pdb_id(directory):
+    metadata_path = f"{directory}/metadata.json"
+    with open(metadata_path) as stream:
+        metadata = json.load(stream)
+    return metadata["pdb_id"]
 
 
 def _ccp4i(directory):
@@ -92,7 +98,7 @@ def _ccp4i(directory):
                 if line[:19] == "             R free":
                     rfree = float(line.split()[-1])
     model_path = f"{directory}/ccp4i/ccp4i.pdb"
-    completeness = _completeness(model_path)
+    completeness = _completeness(model_path, _pdb_id(directory))
     return _result_dict("ccp4i", completeness, rwork, rfree, seconds)
 
 
@@ -108,15 +114,14 @@ def _modelcraft(directory, disable=None):
                 rfree = modelcraft["final"]["r_free"]
                 seconds = modelcraft["seconds"]["total"]
     model_path = f"{directory}/{modelcraft_dir}/modelcraft.cif"
-    completeness = _completeness(model_path)
+    completeness = _completeness(model_path, _pdb_id(directory))
     modelcraft_key = modelcraft_dir.replace("-", "_")
     return _result_dict(modelcraft_key, completeness, rwork, rfree, seconds)
 
 
-def _completeness(model_path):
+def _completeness(model_path, pdb_id):
     if not os.path.exists(model_path):
         return None
-    pdb_id = model_path.split("/")[2]
     built = mc.read_structure(model_path)
     deposited = pdbe.structure(pdb_id)
     moved = _csymmatch(built, deposited)

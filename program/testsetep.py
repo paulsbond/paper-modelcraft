@@ -33,6 +33,7 @@ def _prepare_case(pdb_id):
     directory = os.path.join("data", "ep", pdb_id)
     if os.path.exists(directory) or testset.already_failed("ep", pdb_id):
         return
+    print("Preparing", pdb_id)
     structure = pdbe.structure(pdb_id)
     rblocks = pdbe.rblocks(pdb_id)
     fmean, freer = sfdata.fmean_rfree(rblocks[0])

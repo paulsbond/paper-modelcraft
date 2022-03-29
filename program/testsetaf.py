@@ -150,6 +150,7 @@ def _prepare_case(path):
     directory = os.path.join("data", "af", uniprot)
     if os.path.exists(directory) or testset.already_failed("ep", uniprot):
         return
+    print("Preparing", uniprot)
     end = int(block.find_value("_ma_target_ref_db_details.seq_db_align_end"))
     if end == 1400:
         return _fail(uniprot, "File contains residues 1-1400 of a longer sequence")

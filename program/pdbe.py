@@ -23,11 +23,11 @@ def structure(pdb_id):
     filename = f"{pdb_id}.cif"
     url = f"https://www.ebi.ac.uk/pdbe/entry-files/download/{filename}"
     path = tinterweb.download_file(filename, url)
-    structure = mc.read_structure(path)
-    mc.remove_residues(structure, "UNL")
-    mc.remove_non_library_atoms(structure)
-    mc.remove_scale(structure=structure)
-    return structure
+    structure_ = mc.read_structure(path)
+    mc.remove_residues(structure_, "UNL")
+    mc.remove_non_library_atoms(structure_)
+    mc.remove_scale(structure=structure_)
+    return structure_
 
 
 def uniprot_data(uniprot):

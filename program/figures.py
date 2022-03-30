@@ -22,7 +22,7 @@ _MARKERS = ["o", "v", "s"]
 _HATCHES = [None, "///", "..."]
 
 plt.rc("axes", titlesize=8, labelsize=8, linewidth=0.6)
-plt.rc("font", size=8, family="sans-serif")
+plt.rc("font", size=8, family="Arial")
 plt.rc("legend", fontsize=8, numpoints=1)
 plt.rc("xtick", labelsize=8)
 plt.rc("ytick", labelsize=8)
@@ -86,14 +86,14 @@ def _time(results):
     fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
     ax = fig.add_subplot(111)
     x = results["modelcraft_seconds"] - results["ccp4i_seconds"]
-    y = results["modelcraft_completeness"] - results["ccp4i_completeness"]
+    y = (results["modelcraft_completeness"] - results["ccp4i_completeness"]) * 100
     x = x / (60 * 60)  # Convert seconds to hours
     ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
     ax.set_xscale("log")
     ax.xaxis.set_major_formatter(ScalarFormatter())
     ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
     ax.set_xlabel("Extra Time / h")
-    ax.set_ylabel("Extra Completeness")
+    ax.set_ylabel("Extra Completeness / p.p.")
     plt.tight_layout(pad=0.3)
     plt.savefig("figures/fig_time.png")
     plt.close()
@@ -122,7 +122,7 @@ def _ablation(results):
         for result in results.to_records():
             for label, key in zip(labels, keys):
                 value = result[f"{key}_{metric}"] - result[f"modelcraft_{metric}"]
-                data[label][metric].append(value)
+                data[label][metric].append(value * 100)
         for label in labels:
             data[label][metric + "_mean"] = np.mean(data[label][metric])
             data[label][metric + "_sem"] = scipy.stats.sem(data[label][metric])
@@ -166,32 +166,32 @@ def _ablation(results):
     ax.margins(x=0.01)
     ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
     ax.set_xlabel("Step Removed")
-    ax.set_ylabel("Mean Change")
+    ax.set_ylabel("Mean Change / p.p.")
     plt.tight_layout(pad=0.3)
     plt.savefig("figures/fig_ablation.png")
     plt.close()
 
 
 def _raw_completness(ax, results):
-    x = results["ccp4i_completeness"]
-    y = results["modelcraft_completeness"]
-    min_, max_ = (0, 1)
+    x = results["ccp4i_completeness"] * 100
+    y = results["modelcraft_completeness"] * 100
+    min_, max_ = (0, 100)
     ax.plot([min_, max_], [min_, max_], "k--", alpha=0.5, linewidth=0.8)
     ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
     ax.axis([min_, max_, min_, max_])
     ax.set_aspect("equal", "box")
     ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
-    ax.set_xlabel("CCP4i Buccaneer Completeness")
-    ax.set_ylabel("ModelCraft Completeness")
+    ax.set_xlabel("CCP4i Buccaneer Completeness / %")
+    ax.set_ylabel("ModelCraft Completeness / %")
 
 
 def _binned_completeness(ax, results, xkey, xlabel, xmin, xmax):
     data = {"ModelCraft": {"x": [], "y": []}, "CCP4i Buccaneer": {"x": [], "y": []}}
     for row in results.to_records():
         data["ModelCraft"]["x"].append(row[xkey])
-        data["ModelCraft"]["y"].append(row["modelcraft_completeness"])
+        data["ModelCraft"]["y"].append(row["modelcraft_completeness"] * 100)
         data["CCP4i Buccaneer"]["x"].append(row[xkey])
-        data["CCP4i Buccaneer"]["y"].append(row["ccp4i_completeness"])
+        data["CCP4i Buccaneer"]["y"].append(row["ccp4i_completeness"] * 100)
     for i, key in enumerate(data):
         x = data[key]["x"]
         y = data[key]["y"]
@@ -205,10 +205,10 @@ def _binned_completeness(ax, results, xkey, xlabel, xmin, xmax):
             color=_COLOURS[i],
             linewidth=0.0,
         )
-    ax.axis([xmin, xmax, 0, 1])
+    ax.axis([xmin, xmax, 0, 100])
     ax.legend(loc="lower right")
     ax.set_xlabel(xlabel)
-    ax.set_ylabel("Completeness")
+    ax.set_ylabel("Completeness / %")
 
 
 def _bin_xy(x, y, nbins=3):

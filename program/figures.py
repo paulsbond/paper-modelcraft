@@ -42,6 +42,7 @@ def _make_figures():
         print("EP:", len(results_ep), file=stream)
         print("AF:", len(results_af), file=stream)
     _mrep(results_mr, results_ep)
+    _mrep_stats(results_mr, results_ep)
     _af(results_af)
     _time(results_mr)
     _ablation(results_mr)
@@ -71,6 +72,44 @@ def _mrep(results_mr, results_ep):
     plt.tight_layout(pad=0.3)
     plt.savefig("figures/fig_mrep.png")
     plt.close()
+
+
+def _mrep_stats(results_mr, results_ep):
+    print("\nmrep stats")
+    stat = (
+        sum(results_mr["modelcraft_completeness"] > results_mr["ccp4i_completeness"])
+        / len(results_mr)
+        * 100
+    )
+    print(f"MR: ModelCraft produced a more complete model in {stat}% of cases")
+    stat = sum(results_mr["modelcraft_completeness"] > 0.8) / len(results_mr) * 100
+    print(f"MR: ModelCraft produced a >80% complete model in {stat}% of cases")
+    stat = sum(results_mr["ccp4i_completeness"] > 0.8) / len(results_mr) * 100
+    print(f"MR: CCP4i produced a >80% complete model in {stat}% of cases")
+    stat = (
+        sum(
+            (results_mr["modelcraft_completeness"] < 0.2)
+            & (results_mr["ccp4i_completeness"] < 0.2)
+        )
+        / len(results_mr)
+        * 100
+    )
+    print(f"MR: Both pipelines produced a <20% complete model in {stat}% of cases")
+    stat = (
+        sum(
+            (results_ep["modelcraft_completeness"] > 0.8)
+            & (results_ep["ccp4i_completeness"] > 0.8)
+        )
+        / len(results_ep)
+        * 100
+    )
+    print(f"EP: Both pipelines produced a >80% complete model in {stat}% of cases")
+    stat = (
+        sum(results_ep["modelcraft_completeness"] > results_ep["ccp4i_completeness"])
+        / len(results_ep)
+        * 100
+    )
+    print(f"EP: ModelCraft produced a more complete model in {stat}% of cases")
 
 
 def _af(results):

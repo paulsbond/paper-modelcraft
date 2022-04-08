@@ -8,6 +8,7 @@
 # At the final published size, the labelling on the figure should be approximately 8pt.
 # Use Arial, Courier, Helvetica, Symbol, Times or Times New Roman
 
+import datetime
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,18 +35,23 @@ def _make_figures():
     results_mr = pd.read_csv("results/results_mr.csv")
     results_ep = pd.read_csv("results/results_ep.csv")
     results_af = pd.read_csv("results/results_af.csv")
-    results_mr.dropna(inplace=True)
-    results_ep.dropna(inplace=True)
-    results_af.dropna(inplace=True)
-    with open("figures/samples.txt", "w") as stream:
-        print("MR:", len(results_mr), file=stream)
-        print("EP:", len(results_ep), file=stream)
-        print("AF:", len(results_af), file=stream)
+    for results in results_mr, results_ep, results_af:
+        results.dropna(inplace=True)
+        _add_extra_columns(results)
     _mrep(results_mr, results_ep)
-    _mrep_stats(results_mr, results_ep)
-    _af(results_af)
     _time(results_mr)
     _ablation(results_mr)
+    _af(results_af)
+    _mr_stats(results_mr)
+    _ep_stats(results_ep)
+    _af_stats(results_af)
+
+
+def _add_extra_columns(results):
+    results["extra_completeness"] = (
+        results["modelcraft_completeness"] - results["ccp4i_completeness"]
+    )
+    results["extra_seconds"] = results["modelcraft_seconds"] - results["ccp4i_seconds"]
 
 
 def _mrep(results_mr, results_ep):
@@ -74,59 +80,11 @@ def _mrep(results_mr, results_ep):
     plt.close()
 
 
-def _mrep_stats(results_mr, results_ep):
-    print("\nmrep stats")
-    stat = (
-        sum(results_mr["modelcraft_completeness"] > results_mr["ccp4i_completeness"])
-        / len(results_mr)
-        * 100
-    )
-    print(f"MR: ModelCraft produced a more complete model in {stat}% of cases")
-    stat = sum(results_mr["modelcraft_completeness"] > 0.8) / len(results_mr) * 100
-    print(f"MR: ModelCraft produced a >80% complete model in {stat}% of cases")
-    stat = sum(results_mr["ccp4i_completeness"] > 0.8) / len(results_mr) * 100
-    print(f"MR: CCP4i produced a >80% complete model in {stat}% of cases")
-    stat = (
-        sum(
-            (results_mr["modelcraft_completeness"] < 0.2)
-            & (results_mr["ccp4i_completeness"] < 0.2)
-        )
-        / len(results_mr)
-        * 100
-    )
-    print(f"MR: Both pipelines produced a <20% complete model in {stat}% of cases")
-    stat = (
-        sum(
-            (results_ep["modelcraft_completeness"] > 0.8)
-            & (results_ep["ccp4i_completeness"] > 0.8)
-        )
-        / len(results_ep)
-        * 100
-    )
-    print(f"EP: Both pipelines produced a >80% complete model in {stat}% of cases")
-    stat = (
-        sum(results_ep["modelcraft_completeness"] > results_ep["ccp4i_completeness"])
-        / len(results_ep)
-        * 100
-    )
-    print(f"EP: ModelCraft produced a more complete model in {stat}% of cases")
-
-
-def _af(results):
-    fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
-    ax = fig.add_subplot(111)
-    _raw_completness(ax, results)
-    plt.tight_layout(pad=0.3)
-    plt.savefig("figures/fig_af.png")
-    plt.close()
-
-
 def _time(results):
     fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
     ax = fig.add_subplot(111)
-    x = results["modelcraft_seconds"] - results["ccp4i_seconds"]
-    y = (results["modelcraft_completeness"] - results["ccp4i_completeness"]) * 100
-    x = x / (60 * 60)  # Convert seconds to hours
+    x = results["extra_seconds"] / (60 * 60)  # Convert seconds to hours
+    y = results["extra_completeness"] * 100
     ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
     ax.set_xscale("log")
     ax.xaxis.set_major_formatter(ScalarFormatter())
@@ -211,6 +169,15 @@ def _ablation(results):
     plt.close()
 
 
+def _af(results):
+    fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
+    ax = fig.add_subplot(111)
+    _raw_completness(ax, results)
+    plt.tight_layout(pad=0.3)
+    plt.savefig("figures/fig_af.png")
+    plt.close()
+
+
 def _raw_completness(ax, results):
     x = results["ccp4i_completeness"] * 100
     y = results["modelcraft_completeness"] * 100
@@ -261,6 +228,69 @@ def _bin_xy(x, y, nbins=3):
     std = np.sqrt(sy2 / (n - 1) - mean * mean)
     se = std / np.sqrt(n)
     return mean, std, se, bin_center
+
+
+def _mr_stats(results):
+    print("\n## MR stats")
+    print(len(results), "samples")
+    stat = sum(results["extra_completeness"] > 0) / len(results) * 100
+    print(f"ModelCraft produced a more complete model in {stat}% of cases")
+    stat = sum(results["modelcraft_completeness"] > 0.8) / len(results) * 100
+    print(f"ModelCraft produced a >80% complete model in {stat}% of cases")
+    stat = sum(results["ccp4i_completeness"] > 0.8) / len(results) * 100
+    print(f"CCP4i produced a >80% complete model in {stat}% of cases")
+    stat = (
+        sum(
+            (results["modelcraft_completeness"] < 0.2)
+            & (results["ccp4i_completeness"] < 0.2)
+        )
+        / len(results)
+        * 100
+    )
+    print(f"Both pipelines produced a <20% complete model in {stat}% of cases")
+    print("Mean extra time:", _timestr(np.mean(results["extra_seconds"])))
+    print("Mean CCP4i time:", _timestr(np.mean(results["ccp4i_seconds"])))
+    print("Mean ModelCraft time:", _timestr(np.mean(results["modelcraft_seconds"])))
+    print("Median extra time:", _timestr(np.median(results["extra_seconds"])))
+    print("Mean extra completeness:", np.mean(results["extra_completeness"]))
+    print("Mean CCP4i completeness:", np.mean(results["ccp4i_completeness"]))
+    print("Mean ModelCraft completeness:", np.mean(results["modelcraft_completeness"]))
+    print("Median extra completeness:", np.median(results["extra_completeness"]))
+
+
+def _ep_stats(results):
+    print("\n## EP stats")
+    print(len(results), "samples")
+    stat = (
+        sum(
+            (results["modelcraft_completeness"] > 0.8)
+            & (results["ccp4i_completeness"] > 0.8)
+        )
+        / len(results)
+        * 100
+    )
+    print(f"Both pipelines produced a >80% complete model in {stat}% of cases")
+    stat = sum(results["extra_completeness"] > 0) / len(results) * 100
+    print(f"ModelCraft produced a more complete model in {stat}% of cases")
+    print("Mean CCP4i completeness:", np.mean(results["ccp4i_completeness"]))
+    print("Mean ModelCraft completeness:", np.mean(results["modelcraft_completeness"]))
+
+
+def _af_stats(results):
+    print("\n## AF stats")
+    print(len(results), "samples")
+    stat = sum(results["extra_completeness"] > 0) / len(results) * 100
+    print(f"ModelCraft produced a more complete model in {stat}% of cases")
+    print("Mean CCP4i completeness:", np.mean(results["ccp4i_completeness"]))
+    print("Mean ModelCraft completeness:", np.mean(results["modelcraft_completeness"]))
+    rowidx = results["extra_completeness"].idxmax()
+    print(results["id"][rowidx], "has the max extra completeness")
+    rowidx = results["extra_completeness"].idxmin()
+    print(results["id"][rowidx], "has the min extra completeness")
+
+
+def _timestr(seconds):
+    return str(datetime.timedelta(seconds=seconds))
 
 
 if __name__ == "__main__":

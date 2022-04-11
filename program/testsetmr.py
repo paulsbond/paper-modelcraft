@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import shutil
 import tarfile
+import urllib
 import modelcraft as mc
 import environ
 import pdbe
@@ -34,7 +35,10 @@ def _prepare_case(pdb_id):
     if os.path.exists(directory) or testset.already_failed("mr", pdb_id):
         return
     print("Preparing", pdb_id)
-    structure = pdbe.structure(pdb_id)
+    try:
+        structure = pdbe.structure(pdb_id)
+    except urllib.error.HTTPError:
+        return _fail(pdb_id, "Entry has been obsoleted in the PDB")
     rblocks = pdbe.rblocks(pdb_id)
     fmean, freer = sfdata.fmean_rfree(rblocks[0])
     if not sfdata.compatible_cell(structure, [fmean, freer]):

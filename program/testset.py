@@ -68,7 +68,7 @@ def write_failures_table(subset):
         with open(_FAILURES_PATH) as stream:
             failures = json.load(stream)
         if subset in failures:
-            counter = collections.Counter(failures[subset])
+            counter = collections.Counter(failures[subset].values())
             os.makedirs("tables", exist_ok=True)
             path = os.path.join("tables", f"{subset}_failures.txt")
             with open(path, "w") as stream:

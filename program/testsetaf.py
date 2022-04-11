@@ -200,6 +200,7 @@ def _prepare():
     print(f"Found {len(paths)} potential entries")
     pool = multiprocessing.Pool()
     pool.map(_prepare_case, paths)
+    testset.write_failures_table("af")
 
 
 if __name__ == "__main__":

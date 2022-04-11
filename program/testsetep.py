@@ -64,6 +64,7 @@ def _prepare():
     print(f"Found {len(pdb_ids)} potential entries")
     pool = multiprocessing.Pool()
     pool.map(_prepare_case, pdb_ids)
+    testset.write_failures_table("ep")
 
 
 if __name__ == "__main__":

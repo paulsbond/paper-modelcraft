@@ -1,3 +1,4 @@
+import collections
 import json
 import multiprocessing
 import os
@@ -60,3 +61,16 @@ def write_failure(subset, key, reason):
         failures.setdefault(subset, {})[key] = reason
         with open(_FAILURES_PATH, "w") as stream:
             json.dump(failures, stream, indent=4)
+
+
+def write_failures_table(subset):
+    if os.path.exists(_FAILURES_PATH):
+        with open(_FAILURES_PATH) as stream:
+            failures = json.load(stream)
+        if subset in failures:
+            counter = collections.Counter(failures[subset])
+            os.makedirs("tables", exist_ok=True)
+            path = os.path.join("tables", f"{subset}_failures.txt")
+            with open(path, "w") as stream:
+                for reason, count in counter.most_common():
+                    print(count, reason, "\n", file=stream)

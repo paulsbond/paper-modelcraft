@@ -73,4 +73,4 @@ def write_failures_table(subset):
             path = os.path.join("tables", f"{subset}_failures.txt")
             with open(path, "w") as stream:
                 for reason, count in counter.most_common():
-                    print(count, reason, "\n", file=stream)
+                    print(count, reason, file=stream)

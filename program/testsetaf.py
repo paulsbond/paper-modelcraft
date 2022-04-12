@@ -162,7 +162,10 @@ def _prepare_case(path):
     if pdb_id is None:
         return _fail(uniprot, "No PDB entries with similarity between 20% and 90%")
     rblocks = pdbe.rblocks(pdb_id)
-    fmean, freer = sfdata.fmean_rfree(rblocks[0])
+    try:
+        fmean, freer = sfdata.fmean_rfree(rblocks[0])
+    except ValueError:
+        return _fail(uniprot, "Error processing deposited structure factor data")
     if not sfdata.compatible_cell(deposited, [fmean, freer]):
         return _fail(uniprot, "Different cell or space group in the structure and data")
     mc.update_cell(deposited, new_cell=fmean.cell)
@@ -196,10 +199,11 @@ def _prepare_case(path):
 def _prepare():
     environ.assert_ccp4()
     print("Preparing the AF testset...")
-    paths = _alphafold_mmcif_paths()
-    print(f"Found {len(paths)} potential entries")
-    pool = multiprocessing.Pool()
-    pool.map(_prepare_case, paths)
+    # paths = _alphafold_mmcif_paths()
+    # print(f"Found {len(paths)} potential entries")
+    # pool = multiprocessing.Pool()
+    # pool.map(_prepare_case, paths)
+    _prepare_case("downloads/data/alphafold/AF-Q16566-F1-model_v2.cif.gz")
     testset.write_failures_table("af")
 
 

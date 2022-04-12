@@ -199,11 +199,10 @@ def _prepare_case(path):
 def _prepare():
     environ.assert_ccp4()
     print("Preparing the AF testset...")
-    # paths = _alphafold_mmcif_paths()
-    # print(f"Found {len(paths)} potential entries")
-    # pool = multiprocessing.Pool()
-    # pool.map(_prepare_case, paths)
-    _prepare_case("downloads/data/alphafold/AF-Q16566-F1-model_v2.cif.gz")
+    paths = _alphafold_mmcif_paths()
+    print(f"Found {len(paths)} potential entries")
+    pool = multiprocessing.Pool()
+    pool.map(_prepare_case, paths)
     testset.write_failures_table("af")
 
 

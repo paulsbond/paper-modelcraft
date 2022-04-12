@@ -4,6 +4,7 @@ import glob
 import multiprocessing
 import os
 import tarfile
+import urllib
 import gemmi
 import modelcraft as mc
 import solrq
@@ -161,7 +162,10 @@ def _prepare_case(path):
     pdb_id, truncated, deposited, similarity = _choose_pdb(pdb_ids, uniprot, alphafold)
     if pdb_id is None:
         return _fail(uniprot, "No PDB entries with similarity between 20% and 90%")
-    rblocks = pdbe.rblocks(pdb_id)
+    try:
+        rblocks = pdbe.rblocks(pdb_id)
+    except urllib.error.HTTPError:
+        return _fail(uniprot, "Could not download structure factor data")
     try:
         fmean, freer = sfdata.fmean_rfree(rblocks[0])
     except ValueError:

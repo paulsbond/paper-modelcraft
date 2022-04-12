@@ -148,7 +148,7 @@ def _prepare_case(path):
     block = doc.sole_block()
     uniprot = block.find_value("_ma_target_ref_db_details.db_accession")
     directory = os.path.join("data", "af", uniprot)
-    if os.path.exists(directory) or testset.already_failed("ep", uniprot):
+    if os.path.exists(directory) or testset.already_failed("af", uniprot):
         return
     print("Preparing", uniprot)
     end = int(block.find_value("_ma_target_ref_db_details.seq_db_align_end"))

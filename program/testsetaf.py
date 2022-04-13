@@ -136,7 +136,12 @@ def _molecular_replacement(fmean, truncated, copies):
     best_structure = None
     search_structures = _make_search_structures(truncated)
     for structure in search_structures:
-        molrep = mc.Molrep(fmean, structure, copies).run()
+        job = mc.Molrep(fmean, structure, copies)
+        try:
+            molrep = job.run()
+        except FileNotFoundError:
+            job._remove_files()
+            continue
         if molrep.n_solution == copies and molrep.mr_score > best_mr_score:
             best_mr_score = molrep.mr_score
             best_structure = molrep.structure

@@ -54,7 +54,10 @@ def _truncate_alphafold(alphafold, residues):
             start = item["startIndex"] - 1
             stop = item["endIndex"]
             for i in range(start, stop):
-                observed[i] = True
+                try:
+                    observed[i] = True
+                except IndexError:  # Error in PDB UniProt mapping
+                    return None
     if not any(observed):
         return None
     for i in reversed(range(len(chain))):
@@ -168,7 +171,7 @@ def _prepare_case(path):
         return _fail(uniprot, "Could not download structure factor data")
     try:
         fmean, freer = sfdata.fmean_rfree(rblocks[0])
-    except ValueError:
+    except (RuntimeError, ValueError):
         return _fail(uniprot, "Error processing deposited structure factor data")
     if not sfdata.compatible_cell(deposited, [fmean, freer]):
         return _fail(uniprot, "Different cell or space group in the structure and data")

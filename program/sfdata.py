@@ -9,6 +9,8 @@ def fmean_rfree(rblock):
     imean = next(mc.DataItem.search(mtz, "JQ"), None)
     fanom = next(mc.DataItem.search(mtz, "GLGL"), None)
     fmean = next(mc.DataItem.search(mtz, "FQ"), None)
+    if (ianom or imean or fanom or fmean) is None:
+        raise RuntimeError("No observations found")
     fmean = fmean or mc.CTruncate(ianom or imean or fanom).run().fmean
     freer = mc.DataItem(mtz, "FreeR_flag")
     freer_values = list(freer.columns[-1])

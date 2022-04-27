@@ -25,6 +25,7 @@ def structure(pdb_id):
     path = tinterweb.download_file(filename, url)
     structure_ = mc.read_structure(path)
     mc.remove_residues(structure_, "UNL")
+    mc.remove_residues(structure_, "UNX")
     mc.remove_non_library_atoms(structure_)
     mc.remove_scale(structure=structure_)
     return structure_

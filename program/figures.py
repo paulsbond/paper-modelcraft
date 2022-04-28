@@ -66,7 +66,7 @@ def _mrep(results_mr, results_ep):
         (ax1, results_mr, "Molecular Replacement"),
         (ax2, results_ep, "Experimental Phasing"),
     ):
-        _raw_completness(ax, results)
+        _raw_completeness(ax, results)
         ax.set_title(title)
     for ax, results, xkey, xlabel, xmin, xmax in (
         (ax3, results_mr, "resolution", "Resolution / Å", 3.5, 1.0),
@@ -172,13 +172,13 @@ def _ablation(results):
 def _af(results):
     fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
     ax = fig.add_subplot(111)
-    _raw_completness(ax, results)
+    _raw_completeness(ax, results)
     plt.tight_layout(pad=0.3)
     plt.savefig("figures/fig_af.png")
     plt.close()
 
 
-def _raw_completness(ax, results):
+def _raw_completeness(ax, results):
     x = results["ccp4i_completeness"] * 100
     y = results["modelcraft_completeness"] * 100
     min_, max_ = (0, 100)

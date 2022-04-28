@@ -48,7 +48,7 @@ def _prepare_case(pdb_id):
         refmac = mc.RefmacXray(structure, fmean, freer, cycles=10).run()
     except ValueError:
         return _fail(pdb_id, "Refmac failure")
-    if refmac.data_completeness < 0.9:
+    if refmac.data_completeness < 90:
         return _fail(pdb_id, "Data completeness less than 90%")
     if refmac.rfree > 0.06 * refmac.resolution_high + 0.17:
         return _fail(pdb_id, "R-free for deposited structure deemed too high")

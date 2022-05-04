@@ -233,21 +233,17 @@ def _bin_xy(x, y, nbins=3):
 def _mr_stats(results):
     print("\n## MR stats")
     print(len(results), "samples")
-    stat = sum(results["extra_completeness"] > 0) / len(results) * 100
-    print(f"ModelCraft produced a more complete model in {stat}% of cases")
-    stat = sum(results["modelcraft_completeness"] > 0.8) / len(results) * 100
-    print(f"ModelCraft produced a >80% complete model in {stat}% of cases")
-    stat = sum(results["ccp4i_completeness"] > 0.8) / len(results) * 100
-    print(f"CCP4i produced a >80% complete model in {stat}% of cases")
-    stat = (
-        sum(
-            (results["modelcraft_completeness"] < 0.2)
-            & (results["ccp4i_completeness"] < 0.2)
-        )
-        / len(results)
-        * 100
+    num = sum(results["extra_completeness"] > 0)
+    print(f"ModelCraft produced a more complete model in {num} cases")
+    num = sum(results["modelcraft_completeness"] > 0.8)
+    print(f"ModelCraft produced a >80% complete model in {num} cases")
+    num = sum(results["ccp4i_completeness"] > 0.8)
+    print(f"CCP4i produced a >80% complete model in {num} cases")
+    num = sum(
+        (results["modelcraft_completeness"] < 0.2)
+        & (results["ccp4i_completeness"] < 0.2)
     )
-    print(f"Both pipelines produced a <20% complete model in {stat}% of cases")
+    print(f"Both pipelines produced a <20% complete model in {num} cases")
     print("Mean extra time:", _timestr(np.mean(results["extra_seconds"])))
     print("Mean CCP4i time:", _timestr(np.mean(results["ccp4i_seconds"])))
     print("Mean ModelCraft time:", _timestr(np.mean(results["modelcraft_seconds"])))
@@ -261,17 +257,13 @@ def _mr_stats(results):
 def _ep_stats(results):
     print("\n## EP stats")
     print(len(results), "samples")
-    stat = (
-        sum(
-            (results["modelcraft_completeness"] > 0.8)
-            & (results["ccp4i_completeness"] > 0.8)
-        )
-        / len(results)
-        * 100
+    num = sum(
+        (results["modelcraft_completeness"] > 0.8)
+        & (results["ccp4i_completeness"] > 0.8)
     )
-    print(f"Both pipelines produced a >80% complete model in {stat}% of cases")
-    stat = sum(results["extra_completeness"] > 0) / len(results) * 100
-    print(f"ModelCraft produced a more complete model in {stat}% of cases")
+    print(f"Both pipelines produced a >80% complete model in {num} cases")
+    num = sum(results["extra_completeness"] > 0)
+    print(f"ModelCraft produced a more complete model in {num} cases")
     print("Mean CCP4i completeness:", np.mean(results["ccp4i_completeness"]))
     print("Mean ModelCraft completeness:", np.mean(results["modelcraft_completeness"]))
 
@@ -279,8 +271,8 @@ def _ep_stats(results):
 def _af_stats(results):
     print("\n## AF stats")
     print(len(results), "samples")
-    stat = sum(results["extra_completeness"] > 0) / len(results) * 100
-    print(f"ModelCraft produced a more complete model in {stat}% of cases")
+    num = sum(results["extra_completeness"] > 0)
+    print(f"ModelCraft produced a more complete model in {num} cases")
     print("Mean CCP4i completeness:", np.mean(results["ccp4i_completeness"]))
     print("Mean ModelCraft completeness:", np.mean(results["modelcraft_completeness"]))
     rowidx = results["extra_completeness"].idxmax()

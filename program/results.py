@@ -18,16 +18,16 @@ def _gather():
     os.makedirs("results", exist_ok=True)
     missing = []
     for subset in ("af", "ep", "mr"):
-        print(f"Gathering {subset.upper()} results...")
         results_path = f"results/results_{subset}.csv"
         done = None
         if os.path.exists(results_path):
             results = pd.read_csv(results_path)
             todo = results[results.isnull().any(axis=1)]
             done = results[~results.isnull().any(axis=1)]
-            dirs = [f"data/{row['type']}/{row['id']}" for row in todo.to_records()]
+            dirs = [f"data/{subset}/{row['id']}" for row in todo.to_records()]
         else:
             dirs = glob.glob(f"data/{subset}/*")
+        print(f"Gathering results for {len(dirs)} {subset} entries...")
         pool = multiprocessing.Pool()
         result_list = pool.map(_result, dirs)
         results = pd.DataFrame(result_list)

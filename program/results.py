@@ -54,6 +54,7 @@ def _result(directory):
         result.update(_modelcraft(directory, disable="dummy-atoms"))
         result.update(_modelcraft(directory, disable="waters"))
         result.update(_modelcraft(directory, disable="side-chain-fixing"))
+        result.update(_modelcraft(directory, disable="extra-cycles"))
     return result
 
 

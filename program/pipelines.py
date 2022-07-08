@@ -47,7 +47,10 @@ def _test_modelcraft(directory, disable=None):
     else:
         args += ["--unbiased"]
     if disable:
-        args += [f"--disable-{disable}"]
+        if disable == "extra-cycles":
+            args += ["--cycles", 5]
+        else:
+            args += [f"--disable-{disable}"]
     with _LOCK:
         time.sleep(1)
     subprocess.call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -75,6 +78,10 @@ def _test_modelcraft_no_waters(directory):
 
 def _test_modelcraft_no_side_chain_fixing(directory):
     _test_modelcraft(directory, disable="side-chain-fixing")
+
+
+def _test_modelcraft_no_extra_cycles(directory):
+    _test_modelcraft(directory, disable="extra-cycles")
 
 
 def _test_ccp4i(directory):
@@ -133,6 +140,7 @@ def _run():
     pool.map_async(_test_modelcraft_no_dummy_atoms, mr_dirs)
     pool.map_async(_test_modelcraft_no_waters, mr_dirs)
     pool.map_async(_test_modelcraft_no_side_chain_fixing, mr_dirs)
+    pool.map_async(_test_modelcraft_no_extra_cycles, mr_dirs)
     pool.map_async(_test_ccp4i, all_dirs)
     pool.close()
     pool.join()

@@ -48,7 +48,7 @@ def _test_modelcraft(directory, disable=None):
         args += ["--unbiased"]
     if disable:
         if disable == "extra-cycles":
-            args += ["--cycles", 5]
+            args += ["--cycles", "5"]
         else:
             args += [f"--disable-{disable}"]
     with _LOCK:

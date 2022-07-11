@@ -42,6 +42,7 @@ def _make_figures():
     _time(results_mr)
     _ablation(results_mr)
     _af(results_af)
+    _rwork(results_mr)
     _mr_stats(results_mr)
     _ep_stats(results_ep)
     _af_stats(results_af)
@@ -82,15 +83,23 @@ def _mrep(results_mr, results_ep):
 
 def _time(results):
     fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
-    ax = fig.add_subplot(111)
-    x = results["extra_seconds"] / (60 * 60)  # Convert seconds to hours
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122, sharey=ax1)
+    x1 = results["extra_seconds"] / (60 * 60)  # Convert seconds to hours
+    x2 = results["extra_seconds"] / results["ccp4i_seconds"] * 100
     y = results["extra_completeness"] * 100
-    ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
-    ax.set_xscale("log")
-    ax.xaxis.set_major_formatter(ScalarFormatter())
-    ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
-    ax.set_xlabel("Extra Time / h")
-    ax.set_ylabel("Extra Completeness / p.p.")
+    ax1.plot(x1, y, "kx", markersize=4, color=_COLOURS[0])
+    ax2.plot(x2, y, "kx", markersize=4, color=_COLOURS[0])
+    ax1.set_xscale("log")
+    ax2.set_xscale("log")
+    ax1.xaxis.set_major_formatter(ScalarFormatter())
+    ax2.xaxis.set_major_formatter(ScalarFormatter())
+    ax1.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    ax2.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    ax1.set_xlabel("Extra Time / h")
+    ax2.set_xlabel("Extra Time / %")
+    ax1.set_ylabel("Extra Completeness / p.p.")
+    plt.setp(ax2.get_yticklabels(), visible=False)
     plt.tight_layout(pad=0.3)
     plt.savefig("figures/fig_time.png")
     plt.close()
@@ -104,6 +113,7 @@ def _ablation(results):
         "Dummy Atom",
         "Water",
         "Side Chain",
+        "Extra Cycles",
     ]
     keys = [
         "modelcraft_no_sheetbend",
@@ -112,6 +122,7 @@ def _ablation(results):
         "modelcraft_no_dummy_atoms",
         "modelcraft_no_waters",
         "modelcraft_no_side_chain_fixing",
+        "modelcraft_no_extra_cycles",
     ]
     metrics = ["completeness", "rwork", "rfree"]
     data = {label: {metric: [] for metric in metrics} for label in labels}
@@ -175,6 +186,28 @@ def _af(results):
     _raw_completeness(ax, results)
     plt.tight_layout(pad=0.3)
     plt.savefig("figures/fig_af.png")
+    plt.close()
+
+
+def _rwork(results):
+    fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
+    ax = fig.add_subplot(111)
+    x = results["mr_rwork"] * 100
+    y = results["modelcraft_rwork"] * 100
+    min_ = min(min(x), min(y))
+    max_ = max(max(x), max(y))
+    padding = (max_ - min_) * 0.05
+    min_ -= padding
+    max_ += padding
+    ax.plot([min_, max_], [min_, max_], "k--", alpha=0.5, linewidth=0.8)
+    ax.plot(x, y, "kx", markersize=4, color=_COLOURS[0])
+    ax.axis([min_, max_, min_, max_])
+    ax.set_aspect("equal", "box")
+    ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
+    ax.set_xlabel("Refined MR R-work / %")
+    ax.set_ylabel("ModelCraft R-work / %")
+    plt.tight_layout(pad=0.3)
+    plt.savefig("figures/fig_rwork.png")
     plt.close()
 
 

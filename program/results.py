@@ -48,6 +48,7 @@ def _result(directory):
     result.update(_ccp4i(directory))
     result.update(_modelcraft(directory))
     if split[1] == "mr":
+        result.update(_mr_rwork(directory))
         result.update(_modelcraft(directory, disable="sheetbend"))
         result.update(_modelcraft(directory, disable="pruning"))
         result.update(_modelcraft(directory, disable="parrot"))
@@ -118,6 +119,17 @@ def _modelcraft(directory, disable=None):
     completeness = _completeness(model_path, _pdb_id(directory))
     modelcraft_key = modelcraft_dir.replace("-", "_")
     return _result_dict(modelcraft_key, completeness, rwork, rfree, seconds)
+
+
+def _mr_rwork(directory):
+    rwork = None
+    path = f"{directory}/modelcraft/modelcraft.json"
+    if os.path.exists(path):
+        with open(path) as stream:
+            modelcraft = json.load(stream)
+            if "jobs" in modelcraft and len(modelcraft["jobs"]) > 1:
+                rwork = modelcraft["jobs"][1]["rwork"]
+    return {"mr_rwork": rwork}
 
 
 def _completeness(model_path, pdb_id):

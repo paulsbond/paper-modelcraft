@@ -196,7 +196,7 @@ def _rwork(results):
     y = results["modelcraft_rwork"] * 100
     min_ = min(min(x), min(y))
     max_ = max(max(x), max(y))
-    padding = (max_ - min_) * 0.05
+    padding = (max_ - min_) * 0.02
     min_ -= padding
     max_ += padding
     ax.plot([min_, max_], [min_, max_], "k--", alpha=0.5, linewidth=0.8)

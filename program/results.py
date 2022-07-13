@@ -123,13 +123,15 @@ def _modelcraft(directory, disable=None):
 
 def _mr_rwork(directory):
     rwork = None
+    rfree = None
     path = f"{directory}/modelcraft/modelcraft.json"
     if os.path.exists(path):
         with open(path) as stream:
             modelcraft = json.load(stream)
             if "jobs" in modelcraft and len(modelcraft["jobs"]) > 1:
                 rwork = modelcraft["jobs"][1]["rwork"]
-    return {"mr_rwork": rwork}
+                rfree = modelcraft["jobs"][1]["rfree"]
+    return {"mr_rwork": rwork, "mr_rfree": rfree}
 
 
 def _completeness(model_path, pdb_id):

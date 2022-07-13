@@ -42,7 +42,7 @@ def _make_figures():
     _time(results_mr)
     _ablation(results_mr)
     _af(results_af)
-    _rwork(results_mr)
+    _rfree(results_mr)
     _mr_stats(results_mr)
     _ep_stats(results_ep)
     _af_stats(results_af)
@@ -189,11 +189,11 @@ def _af(results):
     plt.close()
 
 
-def _rwork(results):
+def _rfree(results):
     fig = plt.figure(figsize=(8.85 / 2.54, 8.85 / 2.54), dpi=600)
     ax = fig.add_subplot(111)
-    x = results["mr_rwork"] * 100
-    y = results["modelcraft_rwork"] * 100
+    x = results["mr_rfree"] * 100
+    y = results["modelcraft_rfree"] * 100
     min_ = min(min(x), min(y))
     max_ = max(max(x), max(y))
     padding = (max_ - min_) * 0.02
@@ -204,10 +204,10 @@ def _rwork(results):
     ax.axis([min_, max_, min_, max_])
     ax.set_aspect("equal", "box")
     ax.tick_params(direction="out", length=3, pad=3, top=False, right=False)
-    ax.set_xlabel("Refined MR R-work / %")
-    ax.set_ylabel("ModelCraft R-work / %")
+    ax.set_xlabel("Refined MR R-free / %")
+    ax.set_ylabel("ModelCraft R-free / %")
     plt.tight_layout(pad=0.3)
-    plt.savefig("figures/fig_rwork.png")
+    plt.savefig("figures/fig_rfree.png")
     plt.close()
 
 
@@ -285,6 +285,8 @@ def _mr_stats(results):
     print("Mean CCP4i completeness:", np.mean(results["ccp4i_completeness"]))
     print("Mean ModelCraft completeness:", np.mean(results["modelcraft_completeness"]))
     print("Median extra completeness:", np.median(results["extra_completeness"]))
+    rowidx = results["extra_completeness"].idxmin()
+    print(results["id"][rowidx], "has the min extra completeness")
 
 
 def _ep_stats(results):
